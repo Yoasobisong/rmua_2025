@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 启动GPS滤波节点 -->
+    <node pkg="navigation" type="gps_filter" name="gps_filter" output="screen"/>
+
+    <!-- 启动tf_trans节点 -->
+    <node pkg="navigation" type="tf_trans" name="tf_trans" output="screen"/>
+
+    <!-- 启动tf_broadcaster节点 -->
+    <node pkg="navigation" type="tf_broadcaster" name="tf_broadcaster" output="screen"/>
+
+</launch> 

@@ -1,0 +1,31 @@
+# ROS build directories
+build/
+devel/
+install/
+
+# Python
+*.pyc
+__pycache__/
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+*~
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+drone_ws/src/CMakeLists.txt
+
+# Custom
+*.bag
+*.avi
+*.mp4

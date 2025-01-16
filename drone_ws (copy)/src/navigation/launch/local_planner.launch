@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 启动局部路径规划节点 -->
+    <node pkg="navigation" type="local_planner" name="local_planner" output="screen">
+        <!-- DWA参数 -->
+        <param name="max_vel" value="2.0"/>
+        <param name="max_accel" value="1.0"/>
+        <param name="max_yaw_rate" value="1.0"/>
+        <param name="max_yaw_accel" value="0.8"/>
+        <param name="vel_resolution" value="0.1"/>
+        <param name="yaw_resolution" value="0.1"/>
+        <param name="dt" value="0.1"/>
+        <param name="predict_time" value="3.0"/>
+        <param name="goal_tolerance" value="0.3"/>
+        <param name="obstacle_radius" value="0.5"/>
+    </node>
+</launch> 

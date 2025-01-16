@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 启动GPS滤波节点 -->
+    <node pkg="navigation" type="gps_filter" name="gps_filter" output="screen"/>
+
+    <!-- 启动tf_trans节点 -->
+    <node pkg="navigation" type="tf_trans" name="tf_trans" output="screen"/>
+
+    <!-- 启动tf_broadcaster节点 -->
+    <node pkg="navigation" type="tf_broadcaster" name="tf_broadcaster" output="screen"/>
+
+    <!-- 添加激光雷达的静态变换 -->
+    <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster"
+          args="0 0 0 0 0 0 drone_frame lidar 50" />
+
+    <!-- 启动rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" 
+          args="-d $(find navigation)/rviz/drone_navigation.rviz" output="screen"/>
+</launch> 

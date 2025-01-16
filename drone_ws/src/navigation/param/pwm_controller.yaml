@@ -1,0 +1,18 @@
+# PWM Controller Parameters
+pwm_controller:
+  # PID parameters
+  kp: 0.4           # Proportional gain
+  ki: 0.01            # Integral gain
+  kd: 0.             # Derivative gain
+  
+  # Control parameters
+  dt: 0.1              # Control loop time (seconds)
+  scaling_factor: 0.0004  # PID output scaling factor
+  
+  # PWM limits
+  base_pwm: 0.1780785769224167     # Base PWM for hover
+  max_pwm: 0.5         # Maximum PWM value
+  min_pwm: 0.0         # Minimum PWM value
+  
+  # Target parameters
+  target_height: 1.2    # Target height in meters 

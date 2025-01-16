@@ -1,0 +1,19 @@
+# Position controller parameters
+position_controller:
+  # X axis PID parameters
+  kp_x: 0.8
+  ki_x: 0.0
+  kd_x: 0.2
+  
+  # Y axis PID parameters
+  kp_y: 0.8
+  ki_y: 0.0
+  kd_y: 0.2
+  
+  # Z axis PID parameters
+  kp_z: 1.0
+  ki_z: 0.0
+  kd_z: 0.2
+  
+  # Maximum tilt angle in degrees
+  max_angle_degrees: 15.0 

@@ -1,0 +1,34 @@
+# RRT*算法参数
+rrt:
+  # 每次扩展的步长（米）
+  # 值越大路径越直接但可能错过狭窄通道
+  step_size: 1.0
+
+  # 朝向目标点采样的概率
+  # 值越大收敛越快但容易陷入局部最优
+  goal_bias: 0.1
+
+  # 重新连接的搜索半径（米）
+  # 值越大路径越优但计算量越大
+  search_radius: 3.0
+
+  # 最大迭代次数
+  # 值越大规划越完整但耗时越长
+  max_iterations: 2000
+
+# 规划空间边界（米）
+space:
+  # x轴范围
+  x_min: -1000.0
+  x_max: 1000.0
+  
+  # y轴范围
+  y_min: -1000.0
+  y_max: 1000.0
+  
+  # z轴范围（考虑安全飞行高度）
+  z_min: 1.0
+  z_max: 3.0 
+
+# Planning frequency in Hz
+planning_frequency: 8.0 

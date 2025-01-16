@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+ROS话题监控工具 - 终端UI版本
+ROS Topic Monitor - Terminal UI Version
+"""
+
+import os
+import sys
+import time
+import curses
+import rospy
+import rostopic
+import threading
+import json
+from typing import List, Dict, Any
+
+class TopicViewer:
+    def __init__(self):
+        # 初始化ROS节点
+        # Initialize ROS node
+        rospy.init_node('topic_viewer', anonymous=True)
+        
+        # 等待ROS系统初始化完成
+        # Wait for ROS system initialization
+        rospy.sleep(1.0)  # 等待1秒钟让系统完全初始化 / Wait for 1 second for system initialization
+        
+        # 初始化状态变量
+        # Initialize state variables
+        self.topics = []  # 话题列表 / Topic list
+        self.current_topic = None  # 当前选中的话题 / Currently selected topic
+        self.topic_data = ""  # 话题数据 / Topic data
+        self.selected_index = 0  # 当前选中的索引 / Current selection index
+        self.scroll_offset = 0  # 滚动偏移 / Scroll offset
+        self.is_monitoring = False  # 是否正在监控 / Monitoring status
+        self.monitor_thread = None  # 监控线程 / Monitor thread
+        self.refresh_thread = None  # 刷新线程 / Refresh thread
+        self.running = True  # 运行标志 / Running flag
+        
+        # 初始化curses
+        # Initialize curses
+        self.screen = curses.initscr()
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(1, curses.COLOR_GREEN, -1)
+        curses.init_pair(2, curses.COLOR_YELLOW, -1)
+        curses.noecho()
+        curses.cbreak()
+        self.screen.keypad(True)
+        curses.curs_set(0)
+        
+        # 获取终端大小
+        # Get terminal size
+        self.height, self.width = self.screen.getmaxyx()
+        
+        # 创建窗口
+        # Create windows
+        self.topic_win = curses.newwin(self.height, self.width // 3, 0, 0)
+        self.data_win = curses.newwin(self.height, (self.width * 2) // 3, 0, self.width // 3)
+        
+        # 设置窗口边框
+        # Set window borders
+        self.topic_win.box()
+        self.data_win.box()
+
+        # 启动自动刷新线程
+        # Start auto-refresh thread
+        self.refresh_thread = threading.Thread(target=self.auto_refresh)
+        self.refresh_thread.daemon = True
+        self.refresh_thread.start()
+
+    def auto_refresh(self):
+        """
+        自动刷新线程
+        Auto-refresh thread
+        """
+        while self.running:
+            self.get_topics()
+            if self.current_topic:
+                self.draw_topics()
+                self.draw_data()
+            time.sleep(0.5)  # 每0.5秒刷新一次 / Refresh every 0.5 seconds
+
+    def get_topics(self):
+        """
+        获取当前活动的话题列表
+        Get current active topic list
+        """
+        try:
+            # 使用完整参数获取所有话题
+            # Get all topics with full parameters
+            topics = rospy.get_published_topics(namespace='/')
+            # 按话题名称排序
+            # Sort topics by name
+            topics.sort(key=lambda x: x[0])
+            if topics != self.topics:  # 只在话题列表发生变化时更新
+                self.topics = topics
+            if not self.topics:
+                rospy.logwarn("未找到任何话题，请确保ROS系统正在运行 / No topics found, please ensure ROS system is running")
+        except Exception as e:
+            rospy.logerr(f"获取话题列表时出错 / Error getting topic list: {str(e)}")
+
+    def topic_callback(self, data):
+        """话题数据回调函数 / Topic data callback function"""
+        try:
+            # 尝试将消息转换为字典并美化输出
+            # Try to convert message to dictionary and beautify output
+            if hasattr(data, '_type'):
+                msg_dict = message_to_dict(data)
+                self.topic_data = json.dumps(msg_dict, indent=2, ensure_ascii=False)
+            else:
+                self.topic_data = str(data)
+            self.draw_data()  # 立即更新显示 / Update display immediately
+        except:
+            self.topic_data = str(data)
+
+    def draw_topics(self):
+        """
+        绘制话题列表
+        Draw topic list
+        """
+        self.topic_win.clear()
+        self.topic_win.box()
+        
+        # 计算可用空间
+        # Calculate available space
+        available_width = self.width // 3 - 4
+        available_height = self.height - 2
+        
+        # 显示标题
+        # Show title
+        title = "话题列表 (按'r'刷新) / Topics (Press 'r' to refresh)"
+        if len(title) > available_width:
+            title = title[:available_width-3] + "..."
+        self.topic_win.addstr(0, 2, title, curses.A_BOLD)
+        
+        # 计算可显示的话题数量
+        # Calculate number of visible topics
+        visible_topics = available_height - 1  # 减去状态栏 / Subtract status bar
+        start_idx = max(0, min(self.selected_index - visible_topics + 1, 
+                             len(self.topics) - visible_topics))
+        
+        for i, (topic_name, topic_type) in enumerate(self.topics[start_idx:]):
+            if i >= visible_topics:
+                break
+                
+            # 截断过长的话题名
+            # Truncate long topic names
+            if len(topic_name) > available_width:
+                topic_name = topic_name[:available_width-3] + "..."
+            
+            # 高亮选中的话题
+            # Highlight selected topic
+            try:
+                if start_idx + i == self.selected_index:
+                    self.topic_win.attron(curses.color_pair(1) | curses.A_BOLD)
+                    self.topic_win.addstr(i+1, 1, f" {topic_name} ")
+                    self.topic_win.attroff(curses.color_pair(1) | curses.A_BOLD)
+                else:
+                    self.topic_win.addstr(i+1, 1, f" {topic_name} ")
+            except curses.error:
+                pass  # 忽略显示错误 / Ignore display errors
+        
+        # 显示话题总数
+        # Show total number of topics
+        try:
+            status = f"共 {len(self.topics)} 个话题 / Total {len(self.topics)} topics"
+            if len(status) > available_width:
+                status = status[:available_width-3] + "..."
+            self.topic_win.addstr(self.height-2, 2, status)
+        except curses.error:
+            pass  # 忽略显示错误 / Ignore display errors
+        
+        self.topic_win.refresh()
+
+    def draw_data(self):
+        """
+        绘制话题数据
+        Draw topic data
+        """
+        self.data_win.clear()
+        self.data_win.box()
+        
+        if self.current_topic:
+            title = f"话题: {self.current_topic[0]} (类型: {self.current_topic[1]})"
+            self.data_win.addstr(0, 2, title, curses.A_BOLD)
+            
+            # 显示数据，处理滚动
+            # Display data, handle scrolling
+            data_lines = self.topic_data.split('\n')
+            max_lines = self.height - 2
+            visible_lines = data_lines[self.scroll_offset:self.scroll_offset + max_lines]
+            
+            for i, line in enumerate(visible_lines):
+                if i >= max_lines:
+                    break
+                try:
+                    self.data_win.addstr(i+1, 1, line[:self.width//3*2-2])
+                except:
+                    pass
+        else:
+            self.data_win.addstr(0, 2, "话题数据 / Topic Data", curses.A_BOLD)
+            self.data_win.addstr(self.height//2, 2, "请选择一个话题... / Please select a topic...")
+        
+        self.data_win.refresh()
+
+    def monitor_topic(self):
+        """
+        监控选中的话题
+        Monitor selected topic
+        """
+        if self.current_topic:
+            topic_name, topic_type = self.current_topic
+            msg_class = rostopic.get_topic_class(topic_name)[0]
+            
+            if msg_class:
+                self.subscriber = rospy.Subscriber(
+                    topic_name,
+                    msg_class,
+                    self.topic_callback,
+                    queue_size=1
+                )
+
+    def stop_monitoring(self):
+        """
+        停止监控当前话题
+        Stop monitoring current topic
+        """
+        if hasattr(self, 'subscriber'):
+            self.subscriber.unregister()
+            self.topic_data = ""
+
+    def run(self):
+        """
+        运行主循环
+        Run main loop
+        """
+        try:
+            while not rospy.is_shutdown() and self.running:
+                # 处理键盘输入
+                # Handle keyboard input
+                try:
+                    key = self.screen.getch()
+                except:
+                    key = None
+                
+                if key == curses.KEY_UP and self.selected_index > 0:
+                    self.selected_index -= 1
+                    self.scroll_offset = 0
+                elif key == curses.KEY_DOWN and self.selected_index < len(self.topics) - 1:
+                    self.selected_index += 1
+                    self.scroll_offset = 0
+                elif key == curses.KEY_ENTER or key == 10:  # Enter键 / Enter key
+                    # 切换话题 / Switch topic
+                    self.stop_monitoring()
+                    self.current_topic = self.topics[self.selected_index]
+                    self.monitor_topic()
+                elif key == curses.KEY_PPAGE:  # Page Up
+                    self.scroll_offset = max(0, self.scroll_offset - self.height + 2)
+                elif key == curses.KEY_NPAGE:  # Page Down
+                    self.scroll_offset += self.height - 2
+                elif key == ord('r'):  # 手动刷新 / Manual refresh
+                    self.get_topics()
+                elif key == ord('q'):  # 退出 / Quit
+                    break
+                
+                time.sleep(0.1)  # 降低CPU使用率 / Reduce CPU usage
+                
+        finally:
+            self.cleanup()
+
+    def cleanup(self):
+        """
+        清理资源
+        Cleanup resources
+        """
+        self.running = False
+        if self.refresh_thread:
+            self.refresh_thread.join()
+        self.stop_monitoring()
+        curses.nocbreak()
+        self.screen.keypad(False)
+        curses.echo()
+        curses.endwin()
+
+def message_to_dict(msg):
+    """
+    将ROS消息转换为字典
+    Convert ROS message to dictionary
+    """
+    dict_out = {}
+    if hasattr(msg, '__slots__'):
+        for slot in msg.__slots__:
+            value = getattr(msg, slot)
+            if hasattr(value, '__slots__'):
+                dict_out[slot] = message_to_dict(value)
+            else:
+                dict_out[slot] = value
+    else:
+        dict_out = msg
+    return dict_out
+
+if __name__ == '__main__':
+    viewer = TopicViewer()
+    viewer.run() 

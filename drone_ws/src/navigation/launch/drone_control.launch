@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- Load PWM controller parameters -->
+    <rosparam command="load" file="$(find navigation)/param/pwm_controller.yaml" />
+
+    <!-- Start PWM controller -->
+    <node pkg="navigation" type="pwm_controller" name="pwm_controller" output="screen">
+        <!-- Explicitly load parameters into the node's namespace -->
+        <rosparam command="load" file="$(find navigation)/param/pwm_controller.yaml" />
+    </node>
+
+    
+</launch> 
