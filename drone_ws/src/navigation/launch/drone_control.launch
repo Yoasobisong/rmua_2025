@@ -1,14 +1,17 @@
 <?xml version="1.0"?>
 <launch>
+    <!-- Load position controller parameters -->
+    <rosparam command="load" file="$(find navigation)/param/position_controller.yaml" />
 
-    <!-- Load PWM controller parameters -->
-    <rosparam command="load" file="$(find navigation)/param/pwm_controller.yaml" />
-
-    <!-- Start PWM controller -->
-    <node pkg="navigation" type="pwm_controller" name="pwm_controller" output="screen">
-        <!-- Explicitly load parameters into the node's namespace -->
-        <rosparam command="load" file="$(find navigation)/param/pwm_controller.yaml" />
+    <!-- Start position controller node -->
+    <node pkg="navigation" type="position_controller" name="position_controller" output="screen">
     </node>
 
-    
+    <!-- Start path planning node -->
+    <node pkg="navigation" type="path_planner" name="path_planner" output="screen">
+    </node>
+
+    <!-- Start RViz with custom configuration -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find navigation)/rviz/drone_navigation.rviz"/>
+
 </launch> 

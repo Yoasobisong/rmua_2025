@@ -112,16 +112,21 @@ rmru_2025/
   * Enhanced PID control
   * Height stability monitoring
 - Parameters:
-  * PID parameters:
-    - kp: 0.5 (proportional gain)
-    - ki: 0.01 (integral gain)
-    - kd: 0.3 (derivative gain)
+  * Position Controller PID parameters:
+    - X/Y axis:
+      * kp: 0.8 (proportional gain)
+      * ki: 0.01 (integral gain)
+      * kd: 0.4 (derivative gain)
+    - Z axis:
+      * kp: 1.0 (proportional gain)
+      * ki: 0.02 (integral gain)
+      * kd: 0.5 (derivative gain)
   * Control parameters:
     - dt: 0.1s (control interval)
-    - scaling_factor: 0.000003
-    - base_pwm: 0.17808237671852112
-    - max_pwm: 0.5
-    - min_pwm: 0.0
+    - scaling_factor: 0.0002
+    - base_pwm: 0.178
+    - max_pwm: 0.182
+    - min_pwm: 0.174
     - target_height: 1.2m
     - take_off_pwm: 0.33
 
@@ -162,16 +167,21 @@ rmru_2025/
 All adjustable parameters are modularized in YAML files under `navigation/param/`:
 
 #### 1. PWM Controller Parameters (pwm_controller.yaml)
-- PID parameters:
-  * kp: 0.5
-  * ki: 0.01
-  * kd: 0.3
+- Position Controller PID parameters:
+  * X/Y axis:
+    - kp: 0.8
+    - ki: 0.01
+    - kd: 0.4
+  * Z axis:
+    - kp: 1.0
+    - ki: 0.02
+    - kd: 0.5
 - Control parameters:
   * dt: 0.1
-  * scaling_factor: 0.000003
-  * base_pwm: 0.17808237671852112
-  * max_pwm: 0.5
-  * min_pwm: 0.0
+  * scaling_factor: 0.0002
+  * base_pwm: 0.178
+  * max_pwm: 0.182
+  * min_pwm: 0.174
   * target_height: 1.2
   * take_off_pwm: 0.33
 
