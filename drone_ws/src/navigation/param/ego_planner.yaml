@@ -1,0 +1,15 @@
+# Ego Planner Parameters
+
+# Planning parameters
+planning_horizon: 10.0    # 局部规划范围（米）
+update_rate: 10.0        # 规划更新频率（Hz）
+min_altitude: 1.0        # 最小飞行高度（米）
+max_altitude: 10.0       # 最大飞行高度（米）
+safe_distance: 1.0       # 安全距离（米）
+resolution: 0.2          # 轨迹分辨率（米）
+
+# Optimization parameters
+max_iter: 100           # 最大迭代次数
+weight_smooth: 1.0      # 平滑项权重
+weight_collision: 10.0  # 碰撞项权重
+weight_feasibility: 5.0 # 可行性权重 

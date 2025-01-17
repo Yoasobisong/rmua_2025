@@ -12,6 +12,7 @@ private:
     ros::Subscriber end_goal_sub_;
     ros::Subscriber lidar_sub_;
     tf::TransformBroadcaster tf_broadcaster_;
+    ros::Timer map_timer_;
 
     tf::Transform current_drone_transform_;
     bool has_drone_pose_;
@@ -35,10 +36,24 @@ private:
         return true;
     }
 
+    void mapTimerCallback(const ros::TimerEvent &)
+    {
+        // 发布静态的map到drone_init的转换
+        tf::Transform map_to_init;
+        map_to_init.setIdentity(); // 设置为单位变换
+        tf_broadcaster_.sendTransform(
+            tf::StampedTransform(map_to_init, ros::Time::now(),
+                                 "map", "drone_init"));
+    }
+
 public:
     TFBroadcaster() : has_drone_pose_(false)
     {
         ROS_INFO("Initializing TF Broadcaster node...");
+
+        // 设置定时器，每100ms发布一次map到drone_init的转换
+        map_timer_ = nh_.createTimer(ros::Duration(0.1),
+                                     &TFBroadcaster::mapTimerCallback, this);
 
         drone_pose_sub_ = nh_.subscribe("/airsim_node/drone_1/drone_pose", 1,
                                         &TFBroadcaster::dronePoseCallback, this);

@@ -1,9 +1,0 @@
-digraph G {
-"drone_frame" -> "lidar"[label="Broadcaster: /lidar_broadcaster\nAverage rate: 99.251 Hz\nMost recent transform: 1736487018.298 ( -0.001 sec old)\nBuffer length: 4.937 sec\n"];
-"drone_init" -> "drone_frame"[label="Broadcaster: /tf_broadcaster\nAverage rate: 6.459 Hz\nMost recent transform: 1736487018.165 ( 0.132 sec old)\nBuffer length: 4.800 sec\n"];
-"drone_init" -> "goal_frame"[label="Broadcaster: /tf_broadcaster\nAverage rate: 20.207 Hz\nMost recent transform: 1736487018.165 ( 0.132 sec old)\nBuffer length: 4.850 sec\n"];
-edge [style=invis];
- subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
-"Recorded at time: 1736487018.297"[ shape=plaintext ] ;
- }->"drone_init";
-}

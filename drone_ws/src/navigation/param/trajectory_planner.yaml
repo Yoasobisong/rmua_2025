@@ -1,0 +1,4 @@
+# Trajectory Planner Parameters
+
+# Planning parameters
+update_rate: 10.0        # 规划更新频率（Hz） 

@@ -12,27 +12,35 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   sensor_msgs
+  nav_msgs
+  visualization_msgs
   airsim_ros
 )
 
 find_package(PCL REQUIRED)
 
+
 catkin_package(
-  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs tf2 tf2_ros tf pcl_ros pcl_conversions sensor_msgs airsim_ros
+  CATKIN_DEPENDS 
+    roscpp 
+    rospy 
+    std_msgs 
+    geometry_msgs 
+    tf2 
+    tf2_ros 
+    tf 
+    pcl_ros 
+    pcl_conversions 
+    sensor_msgs 
+    nav_msgs
+    visualization_msgs
+    airsim_ros
 )
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
 )
-
-# PWM Controller node
-add_executable(pwm_controller src/pwm_controller.cpp)
-target_link_libraries(pwm_controller ${catkin_LIBRARIES})
-
-# Position Controller node
-add_executable(position_controller src/position_controller.cpp)
-target_link_libraries(position_controller ${catkin_LIBRARIES})
 
 # TF Broadcaster node
 add_executable(tf_broadcaster src/tf_broadcaster.cpp)
@@ -46,6 +54,7 @@ target_link_libraries(tf_trans ${catkin_LIBRARIES})
 add_executable(gps_filter src/gps_filter.cpp)
 target_link_libraries(gps_filter ${catkin_LIBRARIES})
 
+
 # Point Cloud Process node
 add_executable(pointcloud_process src/pointcloud_process.cpp)
 target_link_libraries(pointcloud_process 
@@ -56,6 +65,19 @@ target_link_libraries(pointcloud_process
 # Drone Marker node
 add_executable(drone_marker src/drone_marker.cpp)
 target_link_libraries(drone_marker ${catkin_LIBRARIES})
+
+# Trajectory Planner node
+add_executable(trajectory_planner src/trajectory_planner.cpp)
+target_link_libraries(trajectory_planner ${catkin_LIBRARIES})
+
+# Ego Planner node
+add_executable(ego_planner src/ego_planner.cpp)
+target_link_libraries(ego_planner 
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+
+
 
 # Install launch files
 install(DIRECTORY launch/

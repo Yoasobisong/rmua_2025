@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+
+
+    <!-- Load parameters -->
+    <rosparam command="load" file="$(find navigation)/param/trajectory_planner.yaml" />
+
+    <!-- Start trajectory planner node -->
+    <node pkg="navigation" type="trajectory_planner" name="trajectory_planner" output="screen">
+        <remap from="~cloud" to="/airsim_node/drone_1/pointcloud/filtered"/>
+        <remap from="~goal" to="/move_base_simple/goal"/>
+        <remap from="~pose" to="/airsim_node/drone_1/pose"/>
+    </node>
+
+    <!-- Start rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find navigation)/rviz/drone_navigation.rviz" />
+</launch> 
