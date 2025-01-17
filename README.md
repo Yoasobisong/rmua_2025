@@ -106,6 +106,45 @@ rmru_2025/
        - Ground segmentation: `ground_distance_thresh=0.3m`
        - Euclidean clustering: `cluster_tolerance=0.5m`, `min_cluster_size=20`, `max_cluster_size=1000`
 
+   - `ego_planner` node:
+     * Subscribes to:
+       - Point cloud: `/airsim_node/drone_1/pointcloud/filtered`
+       - Goal pose: `/move_base_simple/goal`
+       - Drone pose: `/airsim_node/drone_1/drone_pose`
+     * Publishes:
+       - Local map: `/ego_planner/local_map`
+       - Optimized trajectory: `/ego_planner/optimized_trajectory`
+       - Debug markers: `/ego_planner/debug_markers`
+     * Features:
+       - Local planning horizon: 10.0m
+       - Safe distance: 1.0m
+       - Resolution: 0.2m
+       - Maximum iterations: 100
+       - Cost weights:
+         * Smoothness: 1.0
+         * Collision: 10.0
+         * Feasibility: 5.0
+       - Height constraints:
+         * Minimum altitude: 1.0m
+         * Maximum altitude: 10.0m
+     * Planning pipeline:
+       1. Point cloud processing:
+          - Extracts local map within planning horizon
+          - Updates KD-tree for collision checking
+       2. Trajectory initialization:
+          - Linear interpolation between start and goal
+          - Adaptive number of waypoints based on distance
+       3. Trajectory optimization:
+          - Gradient descent optimization
+          - Cost function considers:
+            * Path smoothness
+            * Collision avoidance
+            * Height constraints
+          - Velocity and acceleration computation
+       4. Visualization:
+          - Trajectory points as red spheres
+          - Velocity vectors as green arrows
+
 ### 3. PWM Controller
 - Features:
   * Adaptive base PWM adjustment
@@ -197,3 +236,17 @@ All adjustable parameters are modularized in YAML files under `navigation/param/
   * cluster_tolerance: 0.5
   * min_cluster_size: 20
   * max_cluster_size: 1000
+
+#### 3. Ego Planner Parameters (ego_planner.yaml)
+- Planning parameters:
+  * planning_horizon: 10.0  # Local planning range (meters)
+  * update_rate: 10.0      # Planning update frequency (Hz)
+  * min_altitude: 1.0      # Minimum flight height (meters)
+  * max_altitude: 10.0     # Maximum flight height (meters)
+  * safe_distance: 1.0     # Safe distance from obstacles (meters)
+  * resolution: 0.2        # Trajectory resolution (meters)
+  * max_iter: 100         # Maximum optimization iterations
+- Cost weights:
+  * weight_smooth: 1.0     # Smoothness term weight
+  * weight_collision: 10.0 # Collision term weight
+  * weight_feasibility: 5.0 # Feasibility term weight
