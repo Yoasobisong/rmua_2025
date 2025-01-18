@@ -1,93 +1,148 @@
 # RMUA 2025 Autonomous Drone System
 
-## Project Structure
+## Overview
+This repository implements an autonomous drone system for the RoboMaster University AI Challenge (RMUA) 2025. The system integrates navigation, perception, and control capabilities for unmanned aerial vehicles, with a focus on robust performance in competition scenarios.
+
+## Technical Architecture
 ```
 rmru_2025/
-├── doc/                    # Documentation directory
-│   └── rules.md           # Competition rules
-├── drone_ws/              # ROS workspace
+├── basic_dev/             # Development tools and configurations
+├── doc/                   # Technical documentation
+│   └── rules.md          # Competition rules and requirements
+├── drone_ws/             # ROS workspace
 │   └── src/
-│       ├── airsim_ros/    # AirSim ROS interface
-│       ├── navigation/    # Navigation package
-│       └── drone_control/ # Drone control package
-└── README.md              # Project documentation
+│       ├── airsim_ros/   # AirSim-ROS bridge for simulation
+│       ├── navigation/   # Core navigation and localization
+│       ├── navigation_vision/ # Vision-based navigation (WIP)
+│       └── drone_control/# Flight control system
+├── scripts/              # Utility scripts
+│   ├── yolo_detect.py   # YOLOv8 detection script
+│   ├── get_photo.py     # Image capture utility
+│   └── topic_viewer.py  # ROS topic visualization
+├── yolov8/              # YOLOv8 training and inference
+│   ├── runs/            # Training results and weights
+│   ├── labels/          # Training data annotations
+│   ├── yaml/            # Model configurations
+│   └── images/          # Training images
+└── README.md            # System documentation
 ```
 
-## Navigation System
-The navigation system consists of the following main components:
+## Core Components
 
-### 1. Coordinate Transformation System
-#### TF Broadcaster
-- Broadcasts coordinate transformations between frames
-- Manages relationships between `drone_init`, `drone_frame`, and `lidar` frames
-- Handles dynamic frame updates
+### 1. Navigation System
+#### Coordinate Transformation System
+- **TF Broadcaster**
+  - Real-time frame transformation
+  - Manages relationships between `drone_init`, `drone_frame`, and `lidar` frames
+  - Quaternion-based rotation representation
+  - Dynamic frame tree management
 
-#### TF Transform
-- Processes coordinate transformations
-- Converts between different coordinate systems
-- Supports global to local coordinate mapping
+- **TF Transform**
+  - 6-DOF pose transformation
+  - ENU (East-North-Up) coordinate system
+  - Transformation chain optimization
+  - Frame relationship management
 
-### 2. Point Cloud Processing
-- Processes raw LiDAR data
-- Implements filtering and downsampling
-- Extracts obstacle information
-- Supports real-time point cloud processing
+#### Point Cloud Processing
+- **LiDAR Data Pipeline**
+  - Point cloud data processing
+  - Filtering and downsampling
+  - Obstacle detection
+  - Environment mapping
 
-### 3. GPS Filter
-- Processes raw GPS data
-- Implements low-pass filtering
-- Provides smoothed position estimates
-- Handles GPS data fusion
+#### State Estimation
+- **GPS Filter**
+  - GPS data filtering
+  - Position estimation
+  - Low-pass filtering implementation
+  - Real-time state updates
 
-### 4. Drone Marker
-- Provides visualization markers for RViz
-- Shows drone position and orientation
-- Supports debug information display
+### 2. Vision System
+#### Object Detection
+- **YOLOv8 Integration**
+  - Real-time object detection
+  - Custom model training for competition targets
+  - Python-based detection pipeline
+  - Integration with ROS framework
 
-## Coordinate Systems
-1. `drone_init`: Initial position coordinate system (global reference)
-2. `drone_frame`: Current drone position coordinate system
-3. `lidar`: LiDAR sensor coordinate system (180° rotation around x-axis relative to drone_frame)
+#### Visualization
+- **Drone Marker**
+  - RViz visualization support
+  - Real-time pose visualization
+  - Debug information display
+  - System state monitoring
 
-## Topics
-### Subscribed Topics
-- `/airsim_node/drone_1/lidar` (sensor_msgs/PointCloud2)
-- `/airsim_node/drone_1/gps` (geometry_msgs/PoseStamped)
-- `/airsim_node/drone_1/imu/imu` (sensor_msgs/Imu)
+### 3. Utility Scripts
+- **Topic Viewer**
+  - ROS topic monitoring
+  - Data visualization
+  - Debug information display
 
-### Published Topics
-- `/airsim_node/drone_1/pointcloud/filtered` (sensor_msgs/PointCloud2)
-- `/airsim_node/drone_1/filtered_gps` (geometry_msgs/PoseStamped)
-- `/airsim_node/drone_1/drone_pose` (geometry_msgs/PoseStamped)
+- **Image Capture**
+  - Camera data collection
+  - Training data preparation
+  - Image processing utilities
 
-## Usage
+## System Requirements
+### Hardware Requirements
+- CPU: Intel i5/i7 or equivalent
+- RAM: 16GB minimum
+- GPU: NVIDIA GPU with CUDA support
+- Camera: Compatible with ROS
+- IMU: Standard drone IMU
+- LiDAR: Compatible with ROS
 
-### 1. Launch Navigation System
-```bash
-roslaunch navigation navigation_tf.launch
-```
-
-### 2. Launch Point Cloud Processing
-```bash
-roslaunch navigation pointcloud_process.launch
-```
-
-### 3. Launch Drone Control
-```bash
-roslaunch navigation drone_control.launch
-```
-
-## Dependencies
+### Software Environment
+- Operating System: Ubuntu 20.04 LTS
 - ROS Noetic
-- PCL
-- Eigen
-- tf2
-- visualization_msgs
-- nav_msgs
-- sensor_msgs
-- geometry_msgs
+- Python 3.8+
+- CUDA + cuDNN (for YOLOv8)
+- OpenCV
+- PCL (Point Cloud Library)
 
-## Maintainer
-- Name: [Your Name]
+## Build & Installation
+```bash
+# Install ROS dependencies
+sudo apt-get update && sudo apt-get install -y \
+    ros-noetic-desktop-full \
+    python3-catkin-tools \
+    libeigen3-dev \
+    libpcl-dev
+
+# Clone the repository
+git clone git@github.com:Yoasobisong/rmua_2025.git
+cd rmru_2025
+
+# Initialize ROS workspace
+cd drone_ws
+catkin init
+catkin config --extend /opt/ros/noetic
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+# Build the workspace
+catkin build
+
+# Source the workspace
+source devel/setup.bash
+```
+
+## Launch Configuration
+```bash
+# Launch navigation system
+roslaunch navigation navigation.launch
+
+# Launch vision system (when implemented)
+roslaunch navigation_vision vision.launch
+```
+
+## Contributors
+- Maintainer: Yoasobisong
 - Email: 3133824384@qq.com
-- GitHub: Yoasobisong
+- Project Status: Under Development
+- Last Updated: January 2024
+
+## License & Usage
+This project is proprietary and confidential. All rights reserved.
+- Competition Use Only
+- No Commercial Usage
+- No Redistribution
