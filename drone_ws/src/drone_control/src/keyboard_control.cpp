@@ -19,7 +19,7 @@ KeyboardControl::KeyboardControl()
     // Initialize parameters
     linear_vel_step_ = 0.5;  // Linear velocity increment
     angular_vel_step_ = 0.5; // Angular velocity increment
-    max_linear_vel_ = 5.0;   // Maximum linear velocity
+    max_linear_vel_ = 12.0;  // Maximum linear velocity
     max_angular_vel_ = 0.8;  // Maximum angular velocity
     control_rate_ = 20.0;    // 20Hz control frequency
 

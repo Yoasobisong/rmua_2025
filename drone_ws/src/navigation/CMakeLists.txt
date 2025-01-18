@@ -77,6 +77,13 @@ target_link_libraries(ego_planner
   ${PCL_LIBRARIES}
 )
 
+# Hybrid Planner node
+add_executable(hybrid_planner src/hybrid_planner.cpp)
+target_link_libraries(hybrid_planner
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+
 
 
 # Install launch files
