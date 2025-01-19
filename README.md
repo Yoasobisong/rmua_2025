@@ -16,7 +16,7 @@ rmru_2025/
 │       ├── navigation_vision/ # Vision-based navigation (WIP)
 │       └── drone_control/# Flight control system
 ├── scripts/              # Utility scripts
-│   ├── yolo_detect.py   # YOLOv8 detection script
+│   ├── yolo_detect.py   # YOLOv8 detection test script
 │   ├── get_photo.py     # Image capture utility
 │   └── topic_viewer.py  # ROS topic visualization
 ├── yolov8/              # YOLOv8 training and inference
@@ -24,7 +24,7 @@ rmru_2025/
 │   ├── labels/          # Training data annotations
 │   ├── yaml/            # Model configurations
 │   └── images/          # Training images
-└── README.md            # System documentation
+└── README.md            # System documentation 
 ```
 
 ## Core Components
@@ -46,9 +46,7 @@ rmru_2025/
 #### Point Cloud Processing
 - **LiDAR Data Pipeline**
   - Point cloud data processing
-  - Filtering and downsampling
-  - Obstacle detection
-  - Environment mapping
+  - Filtering
 
 #### State Estimation
 - **GPS Filter**
@@ -58,19 +56,8 @@ rmru_2025/
   - Real-time state updates
 
 ### 2. Vision System
-#### Object Detection
-- **YOLOv8 Integration**
-  - Real-time object detection
-  - Custom model training for competition targets
-  - Python-based detection pipeline
-  - Integration with ROS framework
 
-#### Visualization
-- **Drone Marker**
-  - RViz visualization support
-  - Real-time pose visualization
-  - Debug information display
-  - System state monitoring
+
 
 ### 3. Utility Scripts
 - **Topic Viewer**
@@ -83,14 +70,15 @@ rmru_2025/
   - Training data preparation
   - Image processing utilities
 
+- **YOLOv8 Test**
+  - YOLOv8 detection test
+
+
 ## System Requirements
 ### Hardware Requirements
-- CPU: Intel i5/i7 or equivalent
-- RAM: 16GB minimum
+- CPU
+- RAM: 8GB minimum
 - GPU: NVIDIA GPU with CUDA support
-- Camera: Compatible with ROS
-- IMU: Standard drone IMU
-- LiDAR: Compatible with ROS
 
 ### Software Environment
 - Operating System: Ubuntu 20.04 LTS
@@ -130,9 +118,6 @@ source devel/setup.bash
 ```bash
 # Launch navigation system
 roslaunch navigation navigation.launch
-
-# Launch vision system (when implemented)
-roslaunch navigation_vision vision.launch
 ```
 
 ## Contributors
