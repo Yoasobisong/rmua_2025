@@ -1,0 +1,5 @@
+<!-- launch -->
+<launch>
+    <node pkg="navigation_vision" type="yolo_deal.py" name="yolo_deal" output="screen"/>
+    <node pkg="navigation_vision" type="get_plan" name="get_plan" output="screen"/>
+</launch>
