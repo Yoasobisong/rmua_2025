@@ -1,3 +1,0 @@
-left_door
-right_door
-car
