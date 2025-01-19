@@ -1,133 +1,189 @@
-# RMUA 2025 Autonomous Drone System
+# RMUA 2025
 
-## Overview
-This repository implements an autonomous drone system for the RoboMaster University AI Challenge (RMUA) 2025. The system integrates navigation, perception, and control capabilities for unmanned aerial vehicles, with a focus on robust performance in competition scenarios.
+## Project Introduction
+This is the project code repository for the RoboMaster 2025 University AI Challenge. The project mainly implements drone navigation and exploration tasks in a simulation environment.
 
-## Technical Architecture
+### Latest Updates
+#### 2024-01-15 Navigation System Optimization
+1. PWM Controller
+   - Implemented adaptive base PWM adjustment
+   - Enhanced PID control parameters
+   - Added height stability monitoring
+   - Improved error handling and logging
+
+2. Local Path Planning
+   - Planning range expansion:
+     * Forward distance: 8m
+     * Lateral distance: 6m
+     * Backward distance: 4m
+   - Enhanced obstacle avoidance:
+     * Minimum avoidance distance: 2m
+     * Safety buffer: 1m
+   - Improved evaluation function:
+     * Added velocity scoring
+     * Added heading scoring
+     * Optimized obstacle scoring
+   - Increased update frequency to 20Hz
+
+## Environment Requirements
+- ROS Noetic
+- Ubuntu 20.04
+- Python 3.8+
+- AirSim Simulator
+
+## Project Structure
 ```
 rmru_2025/
-├── basic_dev/             # Development tools and configurations
-├── doc/                   # Technical documentation
-│   └── rules.md          # Competition rules and requirements
-├── drone_ws/             # ROS workspace
+├── basic_dev/          # Basic development workspace
+├── doc/               # Documentation directory
+│   ├── rules.md                      # Competition rules
+│   ├── ros_topics_classification.md  # ROS topics classification
+│   └── ros_services_classification.md # ROS services classification
+├── drone_ws/          # Drone development workspace
 │   └── src/
-│       ├── airsim_ros/   # AirSim-ROS bridge for simulation
-│       ├── navigation/   # Core navigation and localization
-│       ├── navigation_vision/ # Vision-based navigation (WIP)
-│       └── drone_control/# Flight control system
-├── scripts/              # Utility scripts
-│   ├── yolo_detect.py   # YOLOv8 detection test script
-│   ├── get_photo.py     # Image capture utility
-│   └── topic_viewer.py  # ROS topic visualization
-├── yolov8/              # YOLOv8 training and inference
-│   ├── runs/            # Training results and weights
-│   ├── labels/          # Training data annotations
-│   ├── yaml/            # Model configurations
-│   └── images/          # Training images
-└── README.md            # System documentation 
+│       ├── navigation/      # Coordinate transformation and navigation package
+│           ├── src/        # Source code directory
+│           ├── launch/     # Launch files directory
+│           ├── param/      # Parameter configuration files
+│           └── rviz/       # RViz configuration files
+│       ├── drone_control/   # Drone control package
+│       └── airsim_ros/     # AirSim ROS interface package
+├── scripts/           # Utility scripts
+└── README.md         # Project documentation
 ```
 
-## Core Components
+## Functional Modules
 
-### 1. Navigation System
-#### Coordinate Transformation System
-- **TF Broadcaster**
-  - Real-time frame transformation
-  - Manages relationships between `drone_init`, `drone_frame`, and `lidar` frames
-  - Quaternion-based rotation representation
-  - Dynamic frame tree management
+### 1. Drone Control (drone_control)
+- Features:
+  * Basic motion control: Forward(w)/Backward(s)/Left(a)/Right(d)
+  * Height control: Up(r)/Down(f)
+  * Yaw control: Left turn(q)/Right turn(e)
+  * Special commands: Takeoff(t)/Land(g)/Stop(space)
+- Technical details:
+  * Control frequency: 20Hz
+  * Maximum linear velocity: 2.0 m/s
+  * Maximum angular velocity: 0.8 rad/s
 
-- **TF Transform**
-  - 6-DOF pose transformation
-  - ENU (East-North-Up) coordinate system
-  - Transformation chain optimization
-  - Frame relationship management
+### 2. Navigation and Coordinate Transformation (navigation)
+#### Coordinate Systems
+1. Coordinate System Relationships:
+   - `drone_init`: Initial position coordinate system, serves as reference
+   - `drone_frame`: Current drone position coordinate system, relative to `drone_init`
+   - `goal_frame`: Target position coordinate system, relative to `drone_init`
+   - `lidar`: LiDAR coordinate system, rotated 180° around x-axis relative to `drone_frame`
 
-#### Point Cloud Processing
-- **LiDAR Data Pipeline**
-  - Point cloud data processing
-  - Filtering
+2. Data Processing Nodes:
+   - `gps_filter` node:
+     * Subscribes to raw GPS: `/airsim_node/drone_1/gps`
+     * Subscribes to IMU: `/airsim_node/drone_1/imu/imu`
+     * Publishes filtered data: `/airsim_node/drone_1/filtered_gps`
+     * Uses first-order low-pass filter (ALPHA=0.3)
+     * Directly uses IMU attitude data
 
-#### State Estimation
-- **GPS Filter**
-  - GPS data filtering
-  - Position estimation
-  - Low-pass filtering implementation
-  - Real-time state updates
+   - `tf_trans` node:
+     * Subscribes to filtered GPS: `/airsim_node/drone_1/filtered_gps`
+     * Subscribes to initial position: `/airsim_node/initial_pose`
+     * Subscribes to goal position: `/airsim_node/end_goal`
+     * Publishes transformed drone pose: `/airsim_node/drone_1/drone_pose`
+     * Publishes transformed initial pose: `/airsim_node/drone_1/drone_init`
+     * Publishes transformed goal pose: `/airsim_node/drone_1/drone_end`
 
-### 2. Vision System
+   - `tf_broadcaster` node:
+     * Broadcasts TF: `drone_init` -> `drone_frame`
+     * Broadcasts TF: `drone_init` -> `goal_frame`
+     * Static TF: `drone_frame` -> `lidar` (180° rotation around x-axis)
 
+   - `pointcloud_process` node:
+     * Subscribes to LiDAR data: `/airsim_node/drone_1/lidar`
+     * Publishes filtered pointcloud: `/airsim_node/drone_1/pointcloud/filtered`
+     * Publishes ground-removed pointcloud: `/airsim_node/drone_1/pointcloud/ground_removed`
+     * Publishes obstacle pointcloud: `/airsim_node/drone_1/pointcloud/obstacles`
+     * Publishes obstacle markers: `/airsim_node/drone_1/obstacles/markers`
+     * Processing pipeline:
+       - Voxel filter: `voxel_leaf_size=0.1m`
+       - Statistical filter: `mean_k=30`, `std_dev_mul_thresh=1.5`
+       - Ground segmentation: `ground_distance_thresh=0.3m`
+       - Euclidean clustering: `cluster_tolerance=0.5m`, `min_cluster_size=20`, `max_cluster_size=1000`
 
+### 3. PWM Controller
+- Features:
+  * Adaptive base PWM adjustment
+  * Enhanced PID control
+  * Height stability monitoring
+- Parameters:
+  * PID parameters:
+    - kp: 0.5 (proportional gain)
+    - ki: 0.01 (integral gain)
+    - kd: 0.3 (derivative gain)
+  * Control parameters:
+    - dt: 0.1s (control interval)
+    - scaling_factor: 0.000003
+    - base_pwm: 0.17808237671852112
+    - max_pwm: 0.5
+    - min_pwm: 0.0
+    - target_height: 1.2m
+    - take_off_pwm: 0.33
 
-### 3. Utility Scripts
-- **Topic Viewer**
-  - ROS topic monitoring
-  - Data visualization
-  - Debug information display
+### Sensor Data
+1. GPS Data:
+   - Topic: `/airsim_node/drone_1/gps`
+   - Type: `geometry_msgs/PoseStamped`
+   - Low-pass filtered
 
-- **Image Capture**
-  - Camera data collection
-  - Training data preparation
-  - Image processing utilities
+2. IMU Data:
+   - Topic: `/airsim_node/drone_1/imu/imu`
+   - Type: `sensor_msgs/Imu`
+   - Provides stable attitude data
 
-- **YOLOv8 Test**
-  - YOLOv8 detection test
+3. LiDAR Data:
+   - Topic: `/airsim_node/drone_1/lidar`
+   - Type: `sensor_msgs/PointCloud2`
+   - Rotated 180° around x-axis relative to drone frame
 
+### RViz Configuration
+- Display organization:
+  1. Point Clouds
+     - Raw LiDAR
+     - Filtered Cloud
+     - No Ground Cloud
+     - Obstacles
+     - Obstacle Boxes
+  2. Coordinate Frames
+     - TF
+     - Drone Frame Axes
+     - World Frame Axes
+  3. Planning
+     - Global Path (red)
+     - Local Path (green)
+     - DWA Trajectories (light color, optimal trajectory in green)
 
-## System Requirements
-### Hardware Requirements
-- CPU
-- RAM: 8GB minimum
-- GPU: NVIDIA GPU with CUDA support
+### Parameter Configuration
+All adjustable parameters are modularized in YAML files under `navigation/param/`:
 
-### Software Environment
-- Operating System: Ubuntu 20.04 LTS
-- ROS Noetic
-- Python 3.8+
-- CUDA + cuDNN (for YOLOv8)
-- OpenCV
-- PCL (Point Cloud Library)
+#### 1. PWM Controller Parameters (pwm_controller.yaml)
+- PID parameters:
+  * kp: 0.5
+  * ki: 0.01
+  * kd: 0.3
+- Control parameters:
+  * dt: 0.1
+  * scaling_factor: 0.000003
+  * base_pwm: 0.17808237671852112
+  * max_pwm: 0.5
+  * min_pwm: 0.0
+  * target_height: 1.2
+  * take_off_pwm: 0.33
 
-## Build & Installation
-```bash
-# Install ROS dependencies
-sudo apt-get update && sudo apt-get install -y \
-    ros-noetic-desktop-full \
-    python3-catkin-tools \
-    libeigen3-dev \
-    libpcl-dev
-
-# Clone the repository
-git clone git@github.com:Yoasobisong/rmua_2025.git
-cd rmru_2025
-
-# Initialize ROS workspace
-cd drone_ws
-catkin init
-catkin config --extend /opt/ros/noetic
-catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
-
-# Build the workspace
-catkin build
-
-# Source the workspace
-source devel/setup.bash
-```
-
-## Launch Configuration
-```bash
-# Launch navigation system
-roslaunch navigation navigation.launch
-```
-
-## Contributors
-- Maintainer: Yoasobisong
-- Email: 3133824384@qq.com
-- Project Status: Under Development
-- Last Updated: January 2024
-
-## License & Usage
-This project is proprietary and confidential. All rights reserved.
-- Competition Use Only
-- No Commercial Usage
-- No Redistribution
+#### 2. Point Cloud Processing Parameters (pointcloud_process.yaml)
+- Voxel filter:
+  * leaf_size: 0.1
+- Statistical filter:
+  * mean_k: 30
+  * std_dev_mul_thresh: 1.5
+- Ground segmentation:
+  * ground_distance_thresh: 0.3
+- Clustering:
+  * cluster_tolerance: 0.5
+  * min_cluster_size: 20
+  * max_cluster_size: 1000
