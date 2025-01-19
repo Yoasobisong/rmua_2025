@@ -124,8 +124,7 @@ roslaunch navigation navigation.launch
 - Maintainer: Yoasobisong
 - Email: 3133824384@qq.com
 - Project Status: Under Development
-- Last Updated: January 2024
-
+- Last Updated: January 2025
 ## License & Usage
 This project is proprietary and confidential. All rights reserved.
 - Competition Use Only
