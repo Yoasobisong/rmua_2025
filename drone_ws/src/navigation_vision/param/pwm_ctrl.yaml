@@ -1,0 +1,22 @@
+pwm_controller:
+  # Initial target position (image center)
+  init_x: 480.0
+  init_y: 360.0
+
+  # PID parameters for linear z control (height)
+  linear_z:
+    kp: 0.028
+    ki: 0.00001
+    kd: 0.001
+
+  # PID parameters for angular z control (yaw)
+  angular_z:
+    kp: 0.0044
+    ki: 0.00001
+    kd: 0.001
+
+  # Linear velocity parameters
+  linear_velocity:
+    search_x: 24.0    # velocity when searching (box[2] == -1)
+    track_x: 25.0     # velocity when tracking target
+    search_z: -0.2   # descent velocity when searching
