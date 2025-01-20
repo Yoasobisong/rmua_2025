@@ -134,6 +134,11 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+## Declare a C++ executable
+add_executable(pwm_ctrl src/pwm_ctrl.cpp)
+add_dependencies(pwm_ctrl ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(pwm_ctrl ${catkin_LIBRARIES})
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/navigation_vision.cpp
@@ -145,16 +150,6 @@ include_directories(
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(get_plan src/get_plan.cpp)
-
-## Add cmake target dependencies of the executable
-add_dependencies(get_plan ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(get_plan
-  ${catkin_LIBRARIES}
-)
-
 #############
 ## Install ##
 #############

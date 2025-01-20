@@ -1,5 +1,9 @@
 <!-- launch -->
-<launch>
+<launch>    
+
+    <!-- Start YOLO detection node -->
     <node pkg="navigation_vision" type="yolo_deal.py" name="yolo_deal" output="screen"/>
-    <node pkg="navigation_vision" type="get_plan" name="get_plan" output="screen"/>
+
+    <!-- Start PWM controller node -->
+    <node pkg="navigation_vision" type="pwm_ctrl" name="pwm_ctrl" output="screen"/>
 </launch>

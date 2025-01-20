@@ -73,26 +73,28 @@ class YOLODetector:
             confidences = np.array(result_msg.confidences)
             valid_indices = [i for i, name in enumerate(result_msg.class_names) if name != 'car']
             # rospy.loginfo(f"valid_indices: {valid_indices}")
-            if valid_indices:
+            if len(valid_indices) > 0:
                 max_idx = valid_indices[np.argmax(confidences[valid_indices])]
                 self.highest_door_ = result_msg.class_names[max_idx]
                 self.highest_door_position_ = result_msg.boxes[max_idx]
                 if self.highest_door_ == "left_door":
                     self.target_position_.box[0] = self.highest_door_position_.box[0] + (0.5 + self.radio_k_) * self.highest_door_position_.box[2]
                     self.target_position_.box[1] = self.highest_door_position_.box[1] + 0.5* self.highest_door_position_.box[3]
+                    self.target_position_.box[2] = 0
                 elif self.highest_door_ == "right_door":
                     self.target_position_.box[0] = self.highest_door_position_.box[0] - (0.5 + self.radio_k_) * self.highest_door_position_.box[2]
                     self.target_position_.box[1] = self.highest_door_position_.box[1] + 0.5* self.highest_door_position_.box[3]
+                    self.target_position_.box[2] = 0
                 else:
                     self.target_position_.box[0] = 0
                     self.target_position_.box[1] = 0
+                    self.target_position_.box[2] = -1
             else:
                 rospy.loginfo("No valid detections found (excluding car)")
                 self.target_position_.box[0] = 0
                 self.target_position_.box[1] = 0
-                self.target_position_.box[2] = 0
-                self.target_position_.box[3] = 0
-            rospy.loginfo(f"target_position_: {self.target_position_}") 
+                self.target_position_.box[2] = -1
+            #rospy.loginfo(f"target_position_: {self.target_position_}") 
             self.target_pub.publish(self.target_position_)
 
             # draw the result
@@ -103,8 +105,10 @@ class YOLODetector:
                 labels=True,       # Show labels
                 conf=True          # Show confidence scores
             )
+            # print(f"annotated_frame_shape: {annotated_frame.shape}")
             # draw the target position
             cv2.circle(annotated_frame, (int(self.target_position_.box[0]), int(self.target_position_.box[1])), 5, (0, 0, 255), -1)
+            cv2.circle(annotated_frame, (480, 360), 5, (0, 255, 0), -1)
             # Convert back to ROS Image message
             img_msg = Image()
             img_msg.header = msg.header
