@@ -29,3 +29,15 @@ drone_ws/src/CMakeLists.txt
 *.bag
 *.avi
 *.mp4
+
+# Images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.ico
+
+# Text files
+*.txt
