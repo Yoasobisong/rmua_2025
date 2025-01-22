@@ -41,3 +41,8 @@ drone_ws/src/CMakeLists.txt
 
 # Text files
 *.txt
+
+# Model weights
+*.pt
+*.pth
+*.weights
