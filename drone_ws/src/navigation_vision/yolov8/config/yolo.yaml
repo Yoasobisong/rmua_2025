@@ -1,0 +1,9 @@
+path: /home/socrates/workspace/rmua_2025/drone_ws/src/navigation_vision/yolov8  # dataset root dir
+train: images/train  # train images (relative to 'path')
+val: images/val  # val images (relative to 'path')
+
+# Classes
+names:
+  0: left_doors
+  1: right_doors
+  2: cars
