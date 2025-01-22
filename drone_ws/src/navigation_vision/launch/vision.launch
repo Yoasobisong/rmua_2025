@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Load parameters -->
+    <rosparam command="load" file="$(find navigation_vision)/config/yaml/vision_params.yaml" />
+    
+    <!-- Start vision nodes -->
+    <node pkg="navigation_vision" type="image_processor" name="image_processor" output="screen">
+        <remap from="image" to="/camera/rgb/image_raw"/>
+    </node>
+</launch> 

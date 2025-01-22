@@ -66,23 +66,23 @@ target_link_libraries(pointcloud_process
 add_executable(drone_marker src/drone_marker.cpp)
 target_link_libraries(drone_marker ${catkin_LIBRARIES})
 
-# Trajectory Planner node
-add_executable(trajectory_planner src/trajectory_planner.cpp)
-target_link_libraries(trajectory_planner ${catkin_LIBRARIES})
+# # Trajectory Planner node
+# add_executable(trajectory_planner src/trajectory_planner.cpp)
+# target_link_libraries(trajectory_planner ${catkin_LIBRARIES})
 
-# Ego Planner node
-add_executable(ego_planner src/ego_planner.cpp)
-target_link_libraries(ego_planner 
-  ${catkin_LIBRARIES}
-  ${PCL_LIBRARIES}
-)
+# # Ego Planner node
+# add_executable(ego_planner src/ego_planner.cpp)
+# target_link_libraries(ego_planner 
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+# )
 
-# Hybrid Planner node
-add_executable(hybrid_planner src/hybrid_planner.cpp)
-target_link_libraries(hybrid_planner
-  ${catkin_LIBRARIES}
-  ${PCL_LIBRARIES}
-)
+# # Hybrid Planner node
+# add_executable(hybrid_planner src/hybrid_planner.cpp)
+# target_link_libraries(hybrid_planner
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+# )
 
 
 
