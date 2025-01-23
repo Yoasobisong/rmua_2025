@@ -176,6 +176,12 @@ class YOLODetector:
         Publish position data based on highest confidence detection
         """
         try:
+            if len(self.position_history) < self.window_size:
+                self.position_history.append(self.position_msg.data)
+                rospy.loginfo(f"Prepare for initial position!")
+            else:
+                self.position_history.pop(0)
+                self.position_history.append(self.position_msg.data)
             # Set default position when no valid detection
             if self.highest_class_id == -1:
                 self.position_msg.data = [0, 0, -1]
