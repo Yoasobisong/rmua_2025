@@ -46,3 +46,7 @@ drone_ws/src/CMakeLists.txt
 *.pt
 *.pth
 *.weights
+
+# YOLOv8 directories
+yolov8/labels/
+yolov8/runs/
