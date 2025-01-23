@@ -13,55 +13,59 @@ import cv2
 from ultralytics import YOLO
 import numpy as np
 import logging
+import yaml
 
 # Set logging level to suppress non-error messages from ultralytics
 logging.getLogger('ultralytics').setLevel(logging.ERROR)
 
 class YOLODetector:
-    def __init__(self, min_area=0, radio_k=0.5):
+    def __init__(self):
         """
         Initialize the YOLO detector node
-        Args:
-            min_area: Minimum area threshold for detections
-            radio_k: Scaling factor for position calculations
         """
         rospy.init_node('yolo_detector', anonymous=True)
+        
+        # Load configuration from YAML
+        config_path = rospy.get_param('~config_path', 'config/yaml/vision_params.yaml')
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
+        
         self.bridge = CvBridge()
         
-        # Initialize YOLO model with pretrained weights
-        self.model = YOLO('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/yolov8/runs/rmua2/weights/best.pt')
+        # Initialize YOLO model with pretrained weights from config
+        self.model = YOLO(self.config['yolo']['model_path'])
         
         # Initialize subscriber for raw camera images
         self.image_sub = rospy.Subscriber(
-            '/airsim_node/drone_1/front_right/Scene',
+            self.config['topics']['camera_input'],
             Image,
             self.image_callback
         )
         
         # Initialize publisher for annotated detection images
         self.image_pub = rospy.Publisher(
-            '/airsim_node/drone_1/front_right/yolo_detect',
+            self.config['topics']['detection_output'],
             Image,
             queue_size=1
         )
 
         # Initialize publisher for target position data
         self.position_pub = rospy.Publisher(
-            '/airsim_node/drone_1/front_right/position',
+            self.config['topics']['position_output'],
             Float32MultiArray,
             queue_size=1
         )
 
-        # Initialize tracking variables for highest confidence detection
+        # Initialize tracking variables
         self.highest_confidence = 0
         self.highest_class_id = 0
         self.highest_coordinates = [0, 0, 0, 0]
-        self.min_area = min_area
-        self.radio_k = radio_k
-
+        self.min_area = self.config['yolo']['min_area']
+        self.min_car_area = self.config['yolo']['min_car_area']
+        self.cars = None
         self.position_msg = Float32MultiArray()
 
-        rospy.loginfo("YOLOv8 detector initialized")
+        rospy.loginfo("YOLOv8 detector initialized with configuration from %s", config_path)
         
     def image_callback(self, msg):
         """
@@ -73,16 +77,29 @@ class YOLODetector:
             # Convert ROS Image to OpenCV format
             cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
             
-            # Run YOLOv8 inference with confidence threshold and minimal line width
-            results = self.model.predict(cv_image, conf=0.6, line_width=1)
+            # Run YOLOv8 inference with parameters from config
+            results = self.model.predict(
+                cv_image, 
+                conf=self.config['yolo']['confidence_threshold'],
+                line_width=self.config['yolo']['line_width']
+            )
             
             # Get the annotated image with detection boxes
-            annotated_image = results[0].plot(line_width=1)
+            annotated_image = results[0].plot(line_width=self.config['yolo']['line_width'])
 
             confidences = results[0].boxes.conf.cpu().numpy()
             class_ids = results[0].boxes.cls.cpu().numpy()
             coordinates = results[0].boxes.xywh.cpu().numpy()
             
+            try:
+                if len(confidences) > 0:
+                    # Find all the class_ids == 2 and areas > self.min_car_area
+                    self.cars = [i for i in range(len(confidences)) if class_ids[i] == 2 and self._area(coordinates[i]) > self.min_car_area]
+                    print(self.cars)
+            except Exception as e:
+                rospy.logerr(f"Error processing detection results: {e}")
+                self.cars = None
+
             try:
                 if len(confidences) == 0:
                     # Reset tracking if no detections found
@@ -111,8 +128,13 @@ class YOLODetector:
 
             # Publish position and visualize detection
             self._pub_position()
-            cv2.circle(annotated_image, (int(self.position_msg.data[0]), int(self.position_msg.data[1])), 5, (0, 0, 255), -1)
-
+            cv2.circle(annotated_image, 
+                      (int(self.position_msg.data[0]), int(self.position_msg.data[1])), 
+                      5, (0, 0, 255), -1)
+            cv2.circle(annotated_image, 
+                      (self.config['image']['center_x'], self.config['image']['center_y']), 
+                      5, (0, 255, 0), -1)
+            
             # Convert annotated image back to ROS format and publish
             ros_image = self.bridge.cv2_to_imgmsg(annotated_image, "bgr8")
             ros_image.header = msg.header  # Preserve the original header
@@ -139,10 +161,19 @@ class YOLODetector:
         if self.highest_class_id == -1:
             self.position_msg.data = [0, 0 , -1]
         elif self.highest_class_id == 0:
-            self.position_msg.data = [self.highest_coordinates[0] + (self.radio_k + 0.5) * self.highest_coordinates[2], self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3], 0]
+            self.position_msg.data = [self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2], self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3], 0]
         elif self.highest_class_id == 1:
-            self.position_msg.data = [self.highest_coordinates[0] - (self.radio_k + 0.5) * self.highest_coordinates[2], self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3], 1]
+            self.position_msg.data = [self.highest_coordinates[0] - (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2], self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3], 1]
+
+        self._fliter_position()
         self.position_pub.publish(self.position_msg)
+
+    def _fliter_position(self):
+        """
+        Filter position data to smooth out noise
+        """
+        self.position_msg.data[0] = self.position_msg.data[0] + 0.1 * (self.position_msg.data[0] - self.position_msg.data[0])
+        self.position_msg.data[1] = self.position_msg.data[1] + 0.1 * (self.position_msg.data[1] - self.position_msg.data[1])
 
 
 if __name__ == '__main__':

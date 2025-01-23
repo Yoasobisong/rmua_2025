@@ -10,38 +10,70 @@ private:
     ros::Subscriber position_sub_;
     ros::Publisher cmd_vel_pub_;
 
-    // PID parameters
-    double kp_yaw_ = 0.005;
-    double ki_yaw_ = 0.0001;
-    double kd_yaw_ = 0.001;
-    double kp_z_ = 0.004;
-    double ki_z_ = 0.0001;
-    double kd_z_ = 0.001;
+    // PID parameters loaded from config
+    double kp_yaw_;
+    double ki_yaw_;
+    double kd_yaw_;
+    double kp_z_;
+    double ki_z_;
+    double kd_z_;
 
-    // Control limits
-    const double MAX_YAW_RATE = 0.3; // rad/s
-    const double MAX_Z_SPEED = 1;    // m/s
-    const double FORWARD_SPEED = 15; // m/s
+    // Control limits loaded from config
+    double MAX_YAW_RATE;
+    double MAX_Z_SPEED;
+    double FORWARD_SPEED;
 
     // Error tracking
-    double yaw_integral_ = 0;
-    double z_integral_ = 0;
-    double prev_yaw_error_ = 0;
-    double prev_z_error_ = 0;
-    double prev_time_ = 0;
+    double yaw_integral_;
+    double z_integral_;
+    double prev_yaw_error_;
+    double prev_z_error_;
+    double prev_time_;
 
     // Image center (assuming 640x480 resolution)
     const int IMAGE_CENTER_X = 480;
     const int IMAGE_CENTER_Y = 360;
 
 public:
-    DroneController()
+    DroneController() : nh_("~")
     {
-        // Initialize subscribers and publishers
-        position_sub_ = nh_.subscribe("/airsim_node/drone_1/front_right/position", 1, &DroneController::positionCallback, this);
-        cmd_vel_pub_ = nh_.advertise<airsim_ros::VelCmd>("/airsim_node/drone_1/vel_cmd_body_frame", 1);
+        // Load PID parameters from config
+        nh_.param<double>("pid/yaw/kp", kp_yaw_, 0.003);
+        nh_.param<double>("pid/yaw/ki", ki_yaw_, 0.0001);
+        nh_.param<double>("pid/yaw/kd", kd_yaw_, 0.001);
+        nh_.param<double>("pid/z/kp", kp_z_, 0.0);
+        nh_.param<double>("pid/z/ki", ki_z_, 0.0);
+        nh_.param<double>("pid/z/kd", kd_z_, 0.0);
 
+        // Load control limits from config
+        nh_.param<double>("control/max_yaw_rate", MAX_YAW_RATE, 10.0);
+        nh_.param<double>("control/max_z_speed", MAX_Z_SPEED, 20.0);
+        nh_.param<double>("control/forward_speed", FORWARD_SPEED, 0.0);
+
+        // Get topics from config
+        std::string position_topic, cmd_vel_topic;
+        nh_.param<std::string>("topics/position", position_topic, "/airsim_node/drone_1/front_right/position");
+        nh_.param<std::string>("topics/cmd_vel", cmd_vel_topic, "/airsim_node/drone_1/vel_cmd_body_frame");
+
+        // Initialize subscribers and publishers
+        position_sub_ = nh_.subscribe(position_topic, 1, &DroneController::positionCallback, this);
+        cmd_vel_pub_ = nh_.advertise<airsim_ros::VelCmd>(cmd_vel_topic, 1);
+
+        // Initialize error tracking
+        yaw_integral_ = 0;
+        z_integral_ = 0;
+        prev_yaw_error_ = 0;
+        prev_z_error_ = 0;
         prev_time_ = ros::Time::now().toSec();
+
+        ROS_INFO("Drone controller initialized with parameters from config");
+        // print parameters
+        ROS_INFO("kp_yaw_: %f", kp_yaw_);
+        ROS_INFO("ki_yaw_: %f", ki_yaw_);
+        ROS_INFO("kd_yaw_: %f", kd_yaw_);
+        ROS_INFO("kp_z_: %f", kp_z_);
+        ROS_INFO("ki_z_: %f", ki_z_);
+        ROS_INFO("kd_z_: %f", kd_z_);
     }
 
     void positionCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
@@ -82,7 +114,7 @@ public:
         airsim_ros::VelCmd cmd_vel;
         cmd_vel.twist.linear.x = FORWARD_SPEED;
         cmd_vel.twist.linear.y = 0.0;
-        cmd_vel.twist.linear.z = -z_output;
+        cmd_vel.twist.linear.z = z_output;
         cmd_vel.twist.angular.x = 0.0;
         cmd_vel.twist.angular.y = 0.0;
         cmd_vel.twist.angular.z = yaw_output;
@@ -106,7 +138,7 @@ public:
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "drone_controller");
+    ros::init(argc, argv, "pwm_vision");
     DroneController controller;
     ros::spin();
     return 0;

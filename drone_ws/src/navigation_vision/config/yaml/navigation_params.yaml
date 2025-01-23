@@ -1,0 +1,24 @@
+# PID Control Parameters
+pid:
+  yaw:
+    kp: 0.0034
+    ki: 0.0001
+    kd: 0.001
+  z:
+    kp: 0.16
+    ki: 0.0001
+    kd: 0.001
+
+# Control Limits
+control:
+  max_yaw_rate: 10.0  # rad/s
+  max_z_speed: 10.0   # m/s
+  forward_speed: 0.0  # m/s
+
+# Topics
+topics:
+  cmd_vel: '/airsim_node/drone_1/vel_cmd_body_frame'
+  position: '/airsim_node/drone_1/front_right/position'
+
+# Control Parameters
+control_rate: 100  # Hz 
