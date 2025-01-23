@@ -8,6 +8,11 @@ Autonomous drone system for RMUA 2025 competition, featuring navigation, vision,
 - trying to use weighted average, and Kalman fliter to deal with the noise
 - without flitered result in the 
 
+### without flitered result image
+![without flitered result image](drone_ws/src/navigation_vision/position_fliter/both.png)
+![without flitered result image](drone_ws/src/navigation_vision/position_fliter/path.png)
+
+
 ## Packages
 - `airsim_ros`: AirSim ROS interface
 - `navigation`: Core navigation package
