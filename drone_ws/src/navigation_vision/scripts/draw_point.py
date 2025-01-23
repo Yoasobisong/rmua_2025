@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 # Read CSV file with only x and y coordinates (first two columns)
-df = pd.read_csv('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/position_data.csv', header=None, usecols=[0, 1], names=['x', 'y'])
+df = pd.read_csv('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', header=None, usecols=[0, 1], names=['x', 'y'])
 
 # Create time index (0 to n-1)
 df['time'] = np.arange(len(df))
@@ -64,6 +64,7 @@ fig.update_layout(
 )
 
 # Save as HTML file
-fig.write_html('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/position_visualization.html')
+fig.write_html('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.html')
 
 print("Interactive visualization has been saved as 'position_visualization.html'")
+    

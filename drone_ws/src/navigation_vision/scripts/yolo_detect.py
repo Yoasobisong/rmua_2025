@@ -176,17 +176,7 @@ class YOLODetector:
         Publish position data based on highest confidence detection
         """
         try:
-            if len(self.position_history) < self.window_size:
-                self.position_history.append(self.position_msg.data)
-                rospy.loginfo(f"Prepare for initial position!")
-            else:
-                self.position_history.pop(0)
-                self.position_history.append(self.position_msg.data)
-            # Set default position when no valid detection
-            if self.highest_class_id == -1:
-                self.position_msg.data = [0, 0, -1]
-            # Calculate position based on detection class
-            elif self.highest_class_id == 0:  # left door
+            if self.highest_class_id == 0:  # left door
                 self.position_msg.data = [
                     self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
                     self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3],
@@ -198,11 +188,22 @@ class YOLODetector:
                     self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3],
                     1
                 ]
+
+
+            if len(self.position_history) < self.window_size:
+                self.position_history.append(self.position_msg.data)
+                rospy.loginfo(f"Prepare for initial position!")
+            else:
+                self.position_history.pop(0)
+                self.position_history.append(self.position_msg.data)
+                # Publish position message
+                self.position_pub.publish(self.position_msg)
+            
             # write position data to csv
-            with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/position_data.csv', 'a') as f:
+            with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 'a') as f:
                 f.write(f"{self.position_msg.data[0]}, {self.position_msg.data[1]}, {self.position_msg.data[2]}\n")
-            # Publish position message
-            self.position_pub.publish(self.position_msg)
+            
+            
             
         except Exception as e:
             rospy.logwarn(f"Error in position publishing: {e}")
