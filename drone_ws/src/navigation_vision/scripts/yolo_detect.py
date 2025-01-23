@@ -64,6 +64,10 @@ class YOLODetector:
         self.min_car_area = self.config['yolo']['min_car_area']
         self.cars = None
         self.position_msg = Float32MultiArray()
+        
+        # smooth windows
+        self.position_history = []
+        self.window_size = self.config['filter']['window_size']
 
         rospy.loginfo("YOLOv8 detector initialized with configuration from %s", config_path)
         
@@ -87,61 +91,75 @@ class YOLODetector:
             # Get the annotated image with detection boxes
             annotated_image = results[0].plot(line_width=self.config['yolo']['line_width'])
 
-            confidences = results[0].boxes.conf.cpu().numpy()
-            class_ids = results[0].boxes.cls.cpu().numpy()
-            coordinates = results[0].boxes.xywh.cpu().numpy()
-            
-            try:
-                if len(confidences) > 0:
-                    # Find all the class_ids == 2 and areas > self.min_car_area
-                    self.cars = [i for i in range(len(confidences)) if class_ids[i] == 2 and self._area(coordinates[i]) > self.min_car_area]
-                    print(self.cars)
-            except Exception as e:
-                rospy.logerr(f"Error processing detection results: {e}")
-                self.cars = None
+            # Initialize detection variables
+            self.cars = []
+            self.highest_confidence = 0
+            self.highest_class_id = -1
+            self.highest_coordinates = [0, 0, 0, 0]
 
-            try:
-                if len(confidences) == 0:
-                    # Reset tracking if no detections found
+            # Process detection results if any exist
+            if len(results[0].boxes) > 0:
+                confidences = results[0].boxes.conf.cpu().numpy()
+                class_ids = results[0].boxes.cls.cpu().numpy()
+                coordinates = results[0].boxes.xywh.cpu().numpy()
+                
+                # Find car detections
+                try:
+                    self.cars = [i for i in range(len(confidences)) 
+                               if class_ids[i] == 2 and 
+                               self._area(coordinates[i]) > self.min_car_area]
+                    
+                    # Draw car detections
+                    if self.cars:
+                        for car in self.cars:
+                            cv2.rectangle(annotated_image, 
+                                        (int(coordinates[car][0] - coordinates[car][2]/2), 
+                                         int(coordinates[car][1] - coordinates[car][3]/2)), 
+                                        (int(coordinates[car][0] + coordinates[car][2]/2), 
+                                         int(coordinates[car][1] + coordinates[car][3]/2)), 
+                                        (255, 0, 255), 2)  # pink
+                except Exception as e:
+                    rospy.logwarn(f"Error processing car detections: {e}")
+                    self.cars = []
+
+                # Find highest confidence detection for doors
+                try:
+                    valid_detections = [
+                        (i, confidences[i]) 
+                        for i in range(len(confidences)) 
+                        if (self._area(coordinates[i]) > self.min_area and
+                            class_ids[i] != 2)
+                    ]
+                    
+                    if valid_detections:
+                        max_conf_idx, max_conf = max(valid_detections, key=lambda x: x[1])
+                        self.highest_confidence = max_conf
+                        self.highest_class_id = class_ids[max_conf_idx]
+                        self.highest_coordinates = coordinates[max_conf_idx]
+                except Exception as e:
+                    rospy.logwarn(f"Error finding highest confidence detection: {e}")
                     self.highest_confidence = 0
                     self.highest_class_id = -1
-                else:
-                    # Find detection with highest confidence meeting criteria
-                    max_conf_idx = max(
-                        range(len(confidences)), 
-                        key=lambda i: confidences[i] if (self._area(coordinates[i]) > self.min_area and confidences[i] > 0.25 and class_ids[i] != 2) else -1
-                    )
-                    
-                    # Update tracking with highest confidence detection
-                    if max_conf_idx >= 0:
-                        self.highest_confidence = confidences[max_conf_idx]
-                        self.highest_class_id = class_ids[max_conf_idx] 
-                        self.highest_coordinates = coordinates[max_conf_idx]
-                    else:
-                        # Reset tracking if no valid detections
-                        self.highest_confidence = 0
-                        self.highest_class_id = -1
-            except Exception as e:
-                rospy.logerr(f"Error processing detection results: {e}")
-                self.highest_confidence = 0
-                self.highest_class_id = -1
 
             # Publish position and visualize detection
             self._pub_position()
-            cv2.circle(annotated_image, 
-                      (int(self.position_msg.data[0]), int(self.position_msg.data[1])), 
-                      5, (0, 0, 255), -1)
+            
+            # Draw target and center points
+            if self.position_msg.data:
+                cv2.circle(annotated_image, 
+                          (int(self.position_msg.data[0]), int(self.position_msg.data[1])), 
+                          5, (0, 0, 255), -1)  # target point in red
             cv2.circle(annotated_image, 
                       (self.config['image']['center_x'], self.config['image']['center_y']), 
-                      5, (0, 255, 0), -1)
+                      5, (0, 255, 0), -1)  # center point in green
             
             # Convert annotated image back to ROS format and publish
             ros_image = self.bridge.cv2_to_imgmsg(annotated_image, "bgr8")
-            ros_image.header = msg.header  # Preserve the original header
+            ros_image.header = msg.header
             self.image_pub.publish(ros_image)
                    
         except Exception as e:
-            rospy.logerr(f"Error processing image: {e}")
+            rospy.logwarn(f"Error in image callback: {e}")
 
     def _area(self, coordinates):
         """
@@ -156,17 +174,32 @@ class YOLODetector:
     def _pub_position(self):
         """
         Publish position data based on highest confidence detection
-        Adjusts position based on class ID and scaling factor
         """
-        if self.highest_class_id == -1:
-            self.position_msg.data = [0, 0 , -1]
-        elif self.highest_class_id == 0:
-            self.position_msg.data = [self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2], self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3], 0]
-        elif self.highest_class_id == 1:
-            self.position_msg.data = [self.highest_coordinates[0] - (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2], self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3], 1]
-
-        self._fliter_position()
-        self.position_pub.publish(self.position_msg)
+        try:
+            # Set default position when no valid detection
+            if self.highest_class_id == -1:
+                self.position_msg.data = [0, 0, -1]
+            # Calculate position based on detection class
+            elif self.highest_class_id == 0:  # left door
+                self.position_msg.data = [
+                    self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
+                    self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3],
+                    0
+                ]
+            elif self.highest_class_id == 1:  # right door
+                self.position_msg.data = [
+                    self.highest_coordinates[0] - (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
+                    self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3],
+                    1
+                ]
+            # write position data to csv
+            with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/position_data.csv', 'a') as f:
+                f.write(f"{self.position_msg.data[0]}, {self.position_msg.data[1]}, {self.position_msg.data[2]}\n")
+            # Publish position message
+            self.position_pub.publish(self.position_msg)
+            
+        except Exception as e:
+            rospy.logwarn(f"Error in position publishing: {e}")
 
     def _fliter_position(self):
         """

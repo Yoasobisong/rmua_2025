@@ -3,10 +3,10 @@ yolo:
   model_path: '/data/workspace/rmua_2025/drone_ws/src/navigation_vision/yolov8/runs/rmua2/weights/best.pt'
   confidence_threshold: 0.8
   min_area: 0
-  min_car_area: 100
+  min_car_area: 15000
   line_width: 1
   radio_k: 0.58
-
+  
 # Image Processing
 image:
   width: 960
@@ -25,3 +25,6 @@ classes:
   left_doors: 0
   right_doors: 1
   cars: 2 
+
+filter:
+  window_size: 10
