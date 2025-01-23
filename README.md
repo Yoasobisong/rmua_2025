@@ -12,12 +12,12 @@ Autonomous drone system for RMUA 2025 competition, featuring navigation, vision,
 - as the same time, also need to consider the problem of the car's position, need to make the filtered position to detect if the car will stop drone, if drone, may need to quickly recalculate the position and make the drone to escape the car
 
 ### without flitered result image
-![without flitered result image](drone_ws/src/navigation_vision/position_fliter/both.png)
-![without flitered result image](drone_ws/src/navigation_vision/position_fliter/path.png)
+<img src="drone_ws/src/navigation_vision/position_fliter/both.png" width="400">
+<img src="drone_ws/src/navigation_vision/position_fliter/path.png" width="400">
 
-### using windows fliter result image
-![using windows fliter result image](drone_ws/src/navigation_vision/position_fliter/windows_both.png)
-![using windows fliter result image](drone_ws/src/navigation_vision/position_fliter/windows_path.png)
+### using windows fliter result image  
+<img src="drone_ws/src/navigation_vision/position_fliter/windows_both.png" width="400">
+<img src="drone_ws/src/navigation_vision/position_fliter/windows_path.png" width="400">
 
 ## Packages
 - `airsim_ros`: AirSim ROS interface
