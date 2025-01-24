@@ -19,6 +19,7 @@ control:
 topics:
   cmd_vel: '/airsim_node/drone_1/vel_cmd_body_frame'
   position: '/airsim_node/drone_1/front_right/position'
+  drone_pose: '/airsim_node/drone_1/drone_pose'
 
 # Control Parameters
 control_rate: 100  # Hz 

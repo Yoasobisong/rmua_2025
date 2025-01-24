@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+    <!-- launch drone_ws/src/navigation/launch/navigation_tf.launch-->
+    <include file="$(find navigation)/launch/navigation_tf.launch"/>
    <!-- Load navigation parameters -->  
     <node pkg="navigation_vision" type="pwm_vision" name="pwm_vision" output="screen">
         <rosparam command="load" file="$(find navigation_vision)/config/yaml/navigation_params.yaml"/>

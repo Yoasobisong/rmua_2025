@@ -2,12 +2,13 @@
 #include <std_msgs/Float32MultiArray.h>
 #include <airsim_ros/VelCmd.h>
 #include <nav_msgs/Odometry.h>
-
+#include <geometry_msgs/PoseStamped.h>
 class DroneController
 {
 private:
     ros::NodeHandle nh_;
     ros::Subscriber position_sub_;
+    ros::Subscriber pose_sub_;
     ros::Publisher cmd_vel_pub_;
 
     // PID parameters loaded from config
@@ -41,9 +42,9 @@ public:
         nh_.param<double>("pid/yaw/kp", kp_yaw_, 0.003);
         nh_.param<double>("pid/yaw/ki", ki_yaw_, 0.0001);
         nh_.param<double>("pid/yaw/kd", kd_yaw_, 0.001);
-        nh_.param<double>("pid/z/kp", kp_z_, 0.0);
-        nh_.param<double>("pid/z/ki", ki_z_, 0.0);
-        nh_.param<double>("pid/z/kd", kd_z_, 0.0);
+        nh_.param<double>("pid/z/kp", kp_z_, 0.004);
+        nh_.param<double>("pid/z/ki", ki_z_, 0.0001);
+        nh_.param<double>("pid/z/kd", kd_z_, 0.001);
 
         // Load control limits from config
         nh_.param<double>("control/max_yaw_rate", MAX_YAW_RATE, 10.0);
@@ -51,14 +52,15 @@ public:
         nh_.param<double>("control/forward_speed", FORWARD_SPEED, 0.0);
 
         // Get topics from config
-        std::string position_topic, cmd_vel_topic;
+        std::string position_topic, cmd_vel_topic, pose_topic;
         nh_.param<std::string>("topics/position", position_topic, "/airsim_node/drone_1/front_right/position");
         nh_.param<std::string>("topics/cmd_vel", cmd_vel_topic, "/airsim_node/drone_1/vel_cmd_body_frame");
+        nh_.param<std::string>("topics/drone_pose", pose_topic, "/airsim_node/drone_1/drone_pose");
 
         // Initialize subscribers and publishers
         position_sub_ = nh_.subscribe(position_topic, 1, &DroneController::positionCallback, this);
         cmd_vel_pub_ = nh_.advertise<airsim_ros::VelCmd>(cmd_vel_topic, 1);
-
+        pose_sub_ = nh_.subscribe(pose_topic, 1, &DroneController::poseCallback, this);
         // Initialize error tracking
         yaw_integral_ = 0;
         z_integral_ = 0;
@@ -88,7 +90,6 @@ public:
 
         // Calculate errors (target position - image center)
         double x_error = msg->data[0] - IMAGE_CENTER_X;
-        double y_error = msg->data[1] - IMAGE_CENTER_Y;
 
         // PID control for yaw (based on x error)
         double yaw_error = x_error;
@@ -98,23 +99,13 @@ public:
                             ki_yaw_ * yaw_integral_ +
                             kd_yaw_ * yaw_derivative;
 
-        // PID control for z (based on y error)
-        double z_error = y_error;
-        z_integral_ += z_error * dt;
-        double z_derivative = (z_error - prev_z_error_) / dt;
-        double z_output = kp_z_ * z_error +
-                          ki_z_ * z_integral_ +
-                          kd_z_ * z_derivative;
-
         // Apply limits
         yaw_output = std::max(-MAX_YAW_RATE, std::min(yaw_output, MAX_YAW_RATE));
-        z_output = std::max(-MAX_Z_SPEED, std::min(z_output, MAX_Z_SPEED));
 
         // Create and publish velocity command
         airsim_ros::VelCmd cmd_vel;
         cmd_vel.twist.linear.x = FORWARD_SPEED;
         cmd_vel.twist.linear.y = 0.0;
-        cmd_vel.twist.linear.z = -10;
         cmd_vel.twist.angular.x = 0.0;
         cmd_vel.twist.angular.y = 0.0;
         cmd_vel.twist.angular.z = yaw_output;
@@ -124,8 +115,12 @@ public:
 
         // Update previous values
         prev_yaw_error_ = yaw_error;
-        prev_z_error_ = z_error;
         prev_time_ = current_time;
+    }
+
+    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
+    {
+        ROS_INFO("Received drone pose: x=%f, y=%f, z=%f", msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
     }
 
     // Reset integral terms if needed

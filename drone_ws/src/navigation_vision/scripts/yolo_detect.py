@@ -26,7 +26,7 @@ class YOLODetector:
         rospy.init_node('yolo_detector', anonymous=True)
         
         # Load configuration from YAML
-        config_path = rospy.get_param('~config_path', 'config/yaml/vision_params.yaml')
+        config_path = rospy.get_param('~config_path', '/data/workspace/rmua_2025/drone_ws/src/navigation_vision/config/yaml/vision_params.yaml')
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
@@ -68,7 +68,8 @@ class YOLODetector:
         # smooth windows
         self.position_history = []
         self.window_size = self.config['filter']['window_size']
-
+        self.max_differ = self.config['filter']['max_differ']
+        self.min_trend = self.config['filter']['min_trend']
         rospy.loginfo("YOLOv8 detector initialized with configuration from %s", config_path)
         
     def image_callback(self, msg):
@@ -171,6 +172,10 @@ class YOLODetector:
         """
         return coordinates[2]*coordinates[3]
 
+    def _filter_predict(self):
+            print(1)
+            print(np.mean(self.position_history, axis=0).tolist())
+            return np.mean(self.position_history, axis=0).tolist()
     def _pub_position(self):
         """
         Publish position data based on highest confidence detection
@@ -179,17 +184,23 @@ class YOLODetector:
             if self.highest_class_id == 0:  # left door
                 self.position_msg.data = [
                     self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
-                    self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3],
+                    self.highest_coordinates[1],
                     0
                 ]
             elif self.highest_class_id == 1:  # right door
                 self.position_msg.data = [
                     self.highest_coordinates[0] - (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
-                    self.highest_coordinates[1] + 0.5 * self.highest_coordinates[3],
+                    self.highest_coordinates[1],
                     1
                 ]
+            elif self.highest_class_id == -1:
+                self.position_msg.data = self._filter_predict()
 
 
+            if self.position_msg.data[0] - self.position_history[4][0] > self.max_differ or self.position_msg.data[1] - self.position_history[4][1] > self.max_differ:
+                print("Error biger than ")
+                self.position_msg.data = self._filter_predict()
+            
             if len(self.position_history) < self.window_size:
                 self.position_history.append(self.position_msg.data)
                 rospy.loginfo(f"Prepare for initial position!")
@@ -200,21 +211,15 @@ class YOLODetector:
                 self.position_pub.publish(self.position_msg)
             
             # write position data to csv
-            # with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 'a') as f:
-            #     f.write(f"{self.position_msg.data[0]}, {self.position_msg.data[1]}, {self.position_msg.data[2]}\n")
+            with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 'a') as f:
+                f.write(f"{self.position_msg.data[0]}, {self.position_msg.data[1]}, {self.position_msg.data[2]}\n")
             
             
             
         except Exception as e:
             rospy.logwarn(f"Error in position publishing: {e}")
 
-    def _fliter_position(self):
-        """
-        Filter position data to smooth out noise
-        """
-        self.position_msg.data[0] = self.position_msg.data[0] + 0.1 * (self.position_msg.data[0] - self.position_msg.data[0])
-        self.position_msg.data[1] = self.position_msg.data[1] + 0.1 * (self.position_msg.data[1] - self.position_msg.data[1])
-
+        
 
 if __name__ == '__main__':
     try:

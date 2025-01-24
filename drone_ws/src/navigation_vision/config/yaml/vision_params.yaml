@@ -27,4 +27,7 @@ classes:
   cars: 2 
 
 filter:
-  window_size: 10
+  window_size: 5
+  max_differ: 400
+  min_trend: 1
+

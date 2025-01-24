@@ -2,69 +2,50 @@
 
 import pandas as pd
 import plotly.graph_objects as go
-import numpy as np
 
-# Read CSV file with only x and y coordinates (first two columns)
-df = pd.read_csv('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', header=None, usecols=[0, 1], names=['x', 'y'])
+# Read CSV file with only x and y coordinates
+df = pd.read_csv('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 
+                 header=None, usecols=[0, 1], names=['x', 'y'])
 
-# Create time index (0 to n-1)
-df['time'] = np.arange(len(df))
+# Create figure with two subplots
+fig = go.Figure()
 
-# Create 3D scatter plot with lines
-fig = go.Figure(data=[
-    # Add lines connecting points
-    go.Scatter3d(
-        x=df['x'],
-        y=df['y'],
-        z=df['time'],
-        mode='lines',
-        line=dict(color='blue', width=2),
-        name='Path'
-    ),
-    # Add points
-    go.Scatter3d(
-        x=df['x'],
-        y=df['y'],
-        z=df['time'],
-        mode='markers',
-        marker=dict(
-            size=3,
-            color='red',
-            opacity=0.8
-        ),
-        name='Points'
-    ),
-    # Add center point line
-    go.Scatter3d(
-        x=[480, 480],
-        y=[360, 360],
-        z=[df['time'].min(), df['time'].max()],
-        mode='lines',
-        line=dict(color='red', width=2, dash='dash'),
-        name='Image Center'
+# Add x position over time
+fig.add_trace(
+    go.Scatter(
+        x=list(range(len(df))),  # Convert range to list
+        y=df['x'],
+        mode='lines+markers',
+        name='X Position',
+        line=dict(color='blue'),
+        marker=dict(size=3)
     )
-])
+)
+
+# Add y position over time
+fig.add_trace(
+    go.Scatter(
+        x=list(range(len(df))),  # Convert range to list
+        y=df['y'],
+        mode='lines+markers',
+        name='Y Position',
+        line=dict(color='red'),
+        marker=dict(size=3)
+    )
+)
 
 # Update layout
 fig.update_layout(
-    title='Detection Points Path Over Time',
-    scene=dict(
-        xaxis_title='X Position',
-        yaxis_title='Y Position',
-        zaxis_title='Point Index',
-        camera=dict(
-            up=dict(x=0, y=0, z=1),
-            center=dict(x=0, y=0, z=0),
-            eye=dict(x=1.5, y=1.5, z=1.5)
-        )
-    ),
+    title='X and Y Positions Over Time',
+    xaxis_title='Time Index',
+    yaxis_title='Position',
     width=1200,
     height=800,
     showlegend=True
 )
 
-# Save as HTML file
-fig.write_html('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.html')
+# Save as PNG file
+fig.write_image('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.png')
 
-print("Interactive visualization has been saved as 'position_visualization.html'")
+print("Plot has been saved as 'only_windows_fliter.png'")
     
