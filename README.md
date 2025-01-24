@@ -12,6 +12,7 @@ Autonomous drone system for RMUA 2025 competition, featuring navigation, vision,
 - as the same time, also need to consider the problem of the car's position, need to make the filtered position to detect if the car will stop drone, if drone, may need to quickly recalculate the position and make the drone to escape the care
 - pwm control: the yaw control just using the error_x, but it's not suitable to use the error_y to control the z, so need another way to control the z.
 - maybe we could set a basic z value, and through the yolo_detect result to adjust the drone's z value to control the drone's height
+- change a mind to using yolo results center_x
 
 ### without flitered result image
 <img src="drone_ws/src/navigation_vision/position_fliter/both.png" width="400">
@@ -20,6 +21,9 @@ Autonomous drone system for RMUA 2025 competition, featuring navigation, vision,
 ### using windows fliter result image  
 <img src="drone_ws/src/navigation_vision/position_fliter/windows_both.png" width="400">
 <img src="drone_ws/src/navigation_vision/position_fliter/windows_path.png" width="400">
+
+### using windows fliter in x but y, change the position.
+<img src="drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.png" width="400">
 
 ## Packages
 - `airsim_ros`: AirSim ROS interface
