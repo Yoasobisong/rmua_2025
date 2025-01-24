@@ -45,7 +45,7 @@ fig.update_layout(
 )
 
 # Save as PNG file
-fig.write_image('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.png')
+fig.write_image('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/fliter.png')
 
 print("Plot has been saved as 'only_windows_fliter.png'")
     

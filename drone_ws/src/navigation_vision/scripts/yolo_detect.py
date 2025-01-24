@@ -173,8 +173,6 @@ class YOLODetector:
         return coordinates[2]*coordinates[3]
 
     def _filter_predict(self):
-            print(1)
-            print(np.mean(self.position_history, axis=0).tolist())
             return np.mean(self.position_history, axis=0).tolist()
     def _pub_position(self):
         """
@@ -196,10 +194,11 @@ class YOLODetector:
             elif self.highest_class_id == -1:
                 self.position_msg.data = self._filter_predict()
 
-
-            if self.position_msg.data[0] - self.position_history[4][0] > self.max_differ or self.position_msg.data[1] - self.position_history[4][1] > self.max_differ:
-                print("Error biger than ")
-                self.position_msg.data = self._filter_predict()
+            # Only check difference when we have enough history
+            if len(self.position_history) >= 5:  # Changed from direct index access
+                if (abs(self.position_msg.data[0] - self.position_history[4][0]) > self.max_differ) or (abs(self.position_msg.data[1] - self.position_history[4][1]) > self.max_differ):
+                    rospy.logwarn("Error bigger than max_differ")
+                    self.position_msg.data = self._filter_predict()
             
             if len(self.position_history) < self.window_size:
                 self.position_history.append(self.position_msg.data)
