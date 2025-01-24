@@ -5,9 +5,9 @@ pid:
     ki: 0.0001
     kd: 0.001
   z:
-    kp: 0.16
-    ki: 0.0001
-    kd: 0.001
+    kp: 0.0
+    ki: 0.0000
+    kd: 0.000
 
 # Control Limits
 control:

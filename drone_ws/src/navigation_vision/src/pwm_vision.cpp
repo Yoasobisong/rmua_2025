@@ -114,7 +114,7 @@ public:
         airsim_ros::VelCmd cmd_vel;
         cmd_vel.twist.linear.x = FORWARD_SPEED;
         cmd_vel.twist.linear.y = 0.0;
-        cmd_vel.twist.linear.z = z_output;
+        cmd_vel.twist.linear.z = -10;
         cmd_vel.twist.angular.x = 0.0;
         cmd_vel.twist.angular.y = 0.0;
         cmd_vel.twist.angular.z = yaw_output;

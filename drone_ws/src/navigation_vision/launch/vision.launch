@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
    <!-- Load navigation parameters -->  
-    <node pkg="navigation_vision" type="pwm_vision" name="drone_controller" output="screen">
+    <node pkg="navigation_vision" type="pwm_vision" name="pwm_vision" output="screen">
         <rosparam command="load" file="$(find navigation_vision)/config/yaml/navigation_params.yaml"/>
     </node>
 </launch> 

@@ -200,8 +200,8 @@ class YOLODetector:
                 self.position_pub.publish(self.position_msg)
             
             # write position data to csv
-            with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 'a') as f:
-                f.write(f"{self.position_msg.data[0]}, {self.position_msg.data[1]}, {self.position_msg.data[2]}\n")
+            # with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 'a') as f:
+            #     f.write(f"{self.position_msg.data[0]}, {self.position_msg.data[1]}, {self.position_msg.data[2]}\n")
             
             
             
