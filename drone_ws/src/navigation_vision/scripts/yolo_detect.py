@@ -72,22 +72,28 @@ class YOLODetector:
             queue_size=1
         )
 
+        self.avoid_car_pub = rospy.Publisher(
+            self.config['topics']['avoid_car_pub'],
+            Float32MultiArray,
+            queue_size=1
+        )
+
         # Initialize tracking variables
         self.highest_confidence = 0
         self.highest_class_id = 0
         self.highest_coordinates = [0, 0, 0, 0]
         self.min_area = self.config['yolo']['min_area']
+        self.max_door_area = self.config['yolo']['max_door_area']
         self.min_car_area = self.config['yolo']['min_car_area']
         self.cars = None
         self.position_msg = Float32MultiArray()
-        self.position_msg.data = [0, 0, 0]
+        
         self.yaw = 0.
         self.pitch = 0.
-        # smooth windows
-        self.position_history = []
-        self.window_size = self.config['filter']['window_size']
-        self.max_differ = self.config['filter']['max_differ']
-        self.min_trend = self.config['filter']['min_trend']
+        self.init_yaw = 0.
+
+        self.car_error = Float32MultiArray()
+
         rospy.loginfo("YOLOv8 detector initialized with configuration from %s", config_path)
         
     def image_callback(self, msg):
@@ -124,18 +130,21 @@ class YOLODetector:
                 
                 # Find car detections
                 try:
-                    self.cars = [i for i in range(len(confidences)) 
-                               if class_ids[i] == 2 and 
-                               self._area(coordinates[i]) > self.min_car_area]
+                    self.cars = [
+                        [coord[0], coord[1], coord[2]*4/3, coord[3]*4/3]  # Expand width and height by 1/6
+                        for i, coord in enumerate(coordinates)
+                        if class_ids[i] == 2 and 
+                        self._area(coordinates[i]) > self.min_car_area
+                    ]
                     
                     # Draw car detections
                     if self.cars:
                         for car in self.cars:
                             cv2.rectangle(annotated_image, 
-                                        (int(coordinates[car][0] - coordinates[car][2]/2), 
-                                         int(coordinates[car][1] - coordinates[car][3]/2)), 
-                                        (int(coordinates[car][0] + coordinates[car][2]/2), 
-                                         int(coordinates[car][1] + coordinates[car][3]/2)), 
+                                        (int(car[0] - car[2]/2), 
+                                         int(car[1] - car[3]/2)), 
+                                        (int(car[0] + car[2]/2), 
+                                         int(car[1] + car[3]/2)), 
                                         (255, 0, 255), 2)  # pink
                 except Exception as e:
                     rospy.logwarn(f"Error processing car detections: {e}")
@@ -146,7 +155,7 @@ class YOLODetector:
                     valid_detections = [
                         (i, confidences[i]) 
                         for i in range(len(confidences)) 
-                        if (self._area(coordinates[i]) > self.min_area and
+                        if (self.max_door_area > self._area(coordinates[i]) > self.min_area and
                             class_ids[i] != 2)
                     ]
                     
@@ -155,8 +164,6 @@ class YOLODetector:
                         self.highest_confidence = max_conf
                         self.highest_class_id = class_ids[max_conf_idx]
                         self.highest_coordinates = coordinates[max_conf_idx]
-                    
-
                 except Exception as e:
                     rospy.logwarn(f"Error finding highest confidence detection: {e}")
                     self.highest_confidence = 0
@@ -169,10 +176,16 @@ class YOLODetector:
             if self.position_msg.data:
                 cv2.circle(annotated_image, 
                           (int(self.position_msg.data[0]), int(self.position_msg.data[1])), 
-                          5, (0, 0, 255), -1)  # target point in red
-            cv2.circle(annotated_image, 
-                      (self.config['image']['center_x'], self.config['image']['center_y']), 
-                      5, (0, 255, 0), -1)  # center point in green
+                          5, (255, 0, 0), -1)  # target point in blue
+            if self._if_attack_car():
+                self.avoid_car_pub.publish(self.car_error)
+                cv2.circle(annotated_image, 
+                        (self.config['image']['center_x'], self.config['image']['center_y']), 
+                        5, (0, 0, 255), -1)  # center point in red
+            else:
+                cv2.circle(annotated_image, 
+                        (self.config['image']['center_x'], self.config['image']['center_y']), 
+                        5, (0, 255, 0), -1)  # center point in green
             
             # Convert annotated image back to ROS format and publish
             ros_image = self.bridge.cv2_to_imgmsg(annotated_image, "bgr8")
@@ -181,7 +194,6 @@ class YOLODetector:
                    
         except Exception as e:
             rospy.logwarn(f"Error in image callback: {e}")
-
     def _area(self, coordinates):
         """
         Calculate area of bounding box
@@ -193,37 +205,52 @@ class YOLODetector:
         return coordinates[2]*coordinates[3]
 
 
+    def _if_attack_car(self):
+        try:
+            if self.cars:
+                # Check if center point (480,360) falls within any car bounding box
+                for car_coords in self.cars:
+                        x1, y1 = car_coords[0] - car_coords[2]/2, car_coords[1] - car_coords[3]/2  # Top-left corner
+                        x2, y2 = car_coords[0] + car_coords[2]/2, car_coords[1] + car_coords[3]/2
+                        
+                        # Check if center point is inside car bounding box
+                        if (x1 < 480. < x2) and (y1 < 360. < y2):
+                            if car_coords[0] - 480 > 0:
+                                self.car_error.data = [-(car_coords[2]/2 - abs(car_coords[0] - 480.))/(car_coords[2]/2) * 100]
+                            else:
+                                self.car_error.data = [(car_coords[2]/2 - abs(car_coords[0] - 480.))/(car_coords[2]/2) * 100]
+                            return True
+                return False
+            return False
+        except Exception as e:
+            rospy.logwarn(f"Error in _if_attack_car: {e}")
+            return False
+
     def _pub_position(self):
         """
         Publish position data based on highest confidence detection
         """
         try:
             if self.highest_class_id == 0:  # left door
-                self.position_msg.data[0] = self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2]
-                self.position_msg.data[2] = 0
+                self.position_msg.data = [
+                    self.highest_coordinates[0] + (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
+                    self.highest_coordinates[1] - self.highest_coordinates[3] * 0.5,
+                    0
+                ]
             elif self.highest_class_id == 1:  # right door
-                self.position_msg.data[0] = self.highest_coordinates[0] - (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2]
-                self.position_msg.data[2] = 1
-            if self.highest_class_id != -1:
-                try:
-                    self.position_msg.data[1] = self.highest_coordinates[1] + self.config['yolo']['error_ky'] * self.highest_coordinates[3] ** 2
-                except Exception as e:
-                    rospy.logwarn(f"Error in position publishing: {e}")
-
-            # Only check difference when we have enough history
-            if len(self.position_history) >= 5:  # Changed from direct index access
-                if (abs(self.position_msg.data[0] - self.position_history[4][0]) > self.max_differ) or (abs(self.position_msg.data[1] - self.position_history[4][1]) > self.max_differ):
-                    rospy.logwarn("Error bigger than max_differ")
-                    pass
-            
-            if len(self.position_history) < self.window_size:
-                self.position_history.append(self.position_msg.data)
-                rospy.loginfo(f"Prepare for initial position!")
+                self.position_msg.data = [
+                    self.highest_coordinates[0] - (self.config['yolo']['radio_k'] + 0.5) * self.highest_coordinates[2],
+                    self.highest_coordinates[1] - self.highest_coordinates[3] * 0.5,
+                    1
+                ]
             else:
-                self.position_history.pop(0)
-                self.position_history.append(self.position_msg.data)
-                # Publish position message
-                self.position_pub.publish(self.position_msg)
+                self.position_msg.data = [
+                    480,
+                    240,
+                    -1
+                ]
+            
+            self.position_pub.publish(self.position_msg)
             
             # write position data to csv
             # with open('/data/workspace/rmua_2025/drone_ws/src/navigation_vision/position_fliter/only_windows_fliter.csv', 'a') as f:
