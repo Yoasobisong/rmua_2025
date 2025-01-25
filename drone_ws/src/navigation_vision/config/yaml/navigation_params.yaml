@@ -9,14 +9,15 @@ pid:
     ki: 0.0001
     kd: 0.001
   y:
-    kp: 0.02
+    kp: 0.04
     ki: 0.0001
-    kd: 0.001
+    kd: 0.00
 
 # Control Limits
 control:
   max_yaw_rate: 20.0  # rad/s
   max_z_speed: 20.0   # m/s
+  max_y_speed: 3
   forward_speed: 20.  # m/s
   control_rate: 100  # Hz 
   reset_timeout: 0.5

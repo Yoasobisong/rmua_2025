@@ -26,6 +26,7 @@ private:
     double MAX_YAW_RATE;
     double MAX_Z_SPEED;
     double FORWARD_SPEED;
+    double MAX_Y_SPEED;
 
     // Error tracking
     double yaw_integral_;
@@ -68,6 +69,7 @@ public:
         nh_.param<double>("control/max_yaw_rate", MAX_YAW_RATE, 10.0);
         nh_.param<double>("control/max_z_speed", MAX_Z_SPEED, 20.0);
         nh_.param<double>("control/forward_speed", FORWARD_SPEED, 0.0);
+        nh_.param<double>("control/max_y_speed", MAX_Y_SPEED, 3.0);
 
         // Add timeout parameter (default 0.5 seconds)
         nh_.param<double>("control/reset_timeout", reset_timeout_, 0.5);
@@ -142,12 +144,12 @@ public:
 
         // Create and publish velocity command
         airsim_ros::VelCmd cmd_vel;
-        cmd_vel.twist.linear.x = 0;
+        cmd_vel.twist.linear.x = FORWARD_SPEED;
         cmd_vel.twist.linear.y = y_output_;
-        cmd_vel.twist.linear.z = 0;
+        cmd_vel.twist.linear.z = z_output;
         cmd_vel.twist.angular.x = 0.0;
         cmd_vel.twist.angular.y = 0.;
-        cmd_vel.twist.angular.z = 0;
+        cmd_vel.twist.angular.z = yaw_output;
 
         ROS_INFO("Publishing velocity command: x=%f, y=%f, z=%f, yaw=%f", cmd_vel.twist.linear.x, cmd_vel.twist.linear.y, cmd_vel.twist.linear.z, cmd_vel.twist.angular.z);
         cmd_vel_pub_.publish(cmd_vel);
@@ -183,7 +185,7 @@ public:
                         kd_y_ * y_derivative;
 
             // Limit y_output to [-1, 1]
-            y_output_ = std::max(-1.0, std::min(y_output_, 1.0));
+            y_output_ = std::max(-MAX_Y_SPEED, std::min(y_output_, MAX_Y_SPEED));
 
             last_avoid_time_ = ros::Time::now();
             prev_y_error_ = y_error;
