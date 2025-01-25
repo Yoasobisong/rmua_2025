@@ -90,6 +90,7 @@ public:
 
         // Calculate errors (target position - image center)
         double x_error = msg->data[0] - IMAGE_CENTER_X;
+        double y_error = msg->data[1] - IMAGE_CENTER_Y;
 
         // PID control for yaw (based on x error)
         double yaw_error = x_error;
@@ -98,15 +99,22 @@ public:
         double yaw_output = kp_yaw_ * yaw_error +
                             ki_yaw_ * yaw_integral_ +
                             kd_yaw_ * yaw_derivative;
-
+        // PID control for z (based on y error)
+        double z_error = y_error;
+        z_integral_ += z_error * dt;
+        double z_derivative = (z_error - prev_z_error_) / dt;
+        double z_output = kp_z_ * z_error +
+                          ki_z_ * z_integral_ +
+                          kd_z_ * z_derivative;
         // Apply limits
         yaw_output = std::max(-MAX_YAW_RATE, std::min(yaw_output, MAX_YAW_RATE));
+        z_output = std::max(-MAX_Z_SPEED, std::min(z_output, MAX_Z_SPEED));
 
         // Create and publish velocity command
         airsim_ros::VelCmd cmd_vel;
         cmd_vel.twist.linear.x = FORWARD_SPEED;
         cmd_vel.twist.linear.y = 0.0;
-        cmd_vel.twist.linear.z = 0.0;
+        cmd_vel.twist.linear.z = z_output;
         cmd_vel.twist.angular.x = 0.0;
         cmd_vel.twist.angular.y = 0.0;
         cmd_vel.twist.angular.z = yaw_output;
@@ -116,12 +124,14 @@ public:
 
         // Update previous values
         prev_yaw_error_ = yaw_error;
+        prev_z_error_ = z_error;
         prev_time_ = current_time;
     }
 
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
     {
-        ROS_INFO("Received drone pose: x=%f, y=%f, z=%f", msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
+        // ROS_INFO("Received drone pose: x=%f, y=%f, z=%f", msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
+        // resetIntegral();
     }
 
     // Reset integral terms if needed
