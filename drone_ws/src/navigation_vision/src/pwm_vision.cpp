@@ -9,6 +9,7 @@ private:
     ros::NodeHandle nh_;
     ros::Subscriber position_sub_;
     ros::Subscriber pose_sub_;
+    ros::Subscriber avoid_car_sub_;
     ros::Publisher cmd_vel_pub_;
 
     // PID parameters loaded from config
@@ -18,7 +19,9 @@ private:
     double kp_z_;
     double ki_z_;
     double kd_z_;
+    double k_y_;
 
+    double y_output_;
     // Control limits loaded from config
     double MAX_YAW_RATE;
     double MAX_Z_SPEED;
@@ -35,8 +38,19 @@ private:
     const int IMAGE_CENTER_X = 480;
     const int IMAGE_CENTER_Y = 360;
 
+    ros::Timer reset_timer_;
+    ros::Time last_avoid_time_;
+    double reset_timeout_; // seconds
+
+    // Add PID parameters for y control
+    double kp_y_;
+    double ki_y_;
+    double kd_y_;
+    double y_integral_;
+    double prev_y_error_;
+
 public:
-    DroneController() : nh_("~")
+    DroneController() : nh_("~"), y_output_(0.0)
     {
         // Load PID parameters from config
         nh_.param<double>("pid/yaw/kp", kp_yaw_, 0.003);
@@ -45,28 +59,44 @@ public:
         nh_.param<double>("pid/z/kp", kp_z_, 0.004);
         nh_.param<double>("pid/z/ki", ki_z_, 0.0001);
         nh_.param<double>("pid/z/kd", kd_z_, 0.001);
+        // Load y PID parameters from config
+        nh_.param<double>("pid/y/kp", kp_y_, 0.5);
+        nh_.param<double>("pid/y/ki", ki_y_, 0.01);
+        nh_.param<double>("pid/y/kd", kd_y_, 0.1);
 
         // Load control limits from config
         nh_.param<double>("control/max_yaw_rate", MAX_YAW_RATE, 10.0);
         nh_.param<double>("control/max_z_speed", MAX_Z_SPEED, 20.0);
         nh_.param<double>("control/forward_speed", FORWARD_SPEED, 0.0);
 
+        // Add timeout parameter (default 0.5 seconds)
+        nh_.param<double>("control/reset_timeout", reset_timeout_, 0.5);
+
+        // Initialize timer to check and reset y_output_
+        reset_timer_ = nh_.createTimer(ros::Duration(0.1), &DroneController::resetCheck, this);
+        last_avoid_time_ = ros::Time::now();
+
         // Get topics from config
-        std::string position_topic, cmd_vel_topic, pose_topic;
+        std::string position_topic, cmd_vel_topic, pose_topic, avoid_car_topic;
         nh_.param<std::string>("topics/position", position_topic, "/airsim_node/drone_1/front_right/position");
         nh_.param<std::string>("topics/cmd_vel", cmd_vel_topic, "/airsim_node/drone_1/vel_cmd_body_frame");
         nh_.param<std::string>("topics/drone_pose", pose_topic, "/airsim_node/drone_1/drone_pose");
-
+        nh_.param<std::string>("topics/avoid_car", avoid_car_topic, "/airsim_node/drone_1/front_right/avoid_car");
         // Initialize subscribers and publishers
         position_sub_ = nh_.subscribe(position_topic, 1, &DroneController::positionCallback, this);
         cmd_vel_pub_ = nh_.advertise<airsim_ros::VelCmd>(cmd_vel_topic, 1);
         pose_sub_ = nh_.subscribe(pose_topic, 1, &DroneController::poseCallback, this);
+        avoid_car_sub_ = nh_.subscribe(avoid_car_topic, 1, &DroneController::avoidCarCallback, this);
         // Initialize error tracking
         yaw_integral_ = 0;
         z_integral_ = 0;
         prev_yaw_error_ = 0;
         prev_z_error_ = 0;
         prev_time_ = ros::Time::now().toSec();
+
+        // Initialize y error tracking
+        y_integral_ = 0;
+        prev_y_error_ = 0;
 
         ROS_INFO("Drone controller initialized with parameters from config");
         // print parameters
@@ -112,12 +142,12 @@ public:
 
         // Create and publish velocity command
         airsim_ros::VelCmd cmd_vel;
-        cmd_vel.twist.linear.x = FORWARD_SPEED;
-        cmd_vel.twist.linear.y = 0.0;
-        cmd_vel.twist.linear.z = z_output;
+        cmd_vel.twist.linear.x = 0;
+        cmd_vel.twist.linear.y = y_output_;
+        cmd_vel.twist.linear.z = 0;
         cmd_vel.twist.angular.x = 0.0;
-        cmd_vel.twist.angular.y = 0.0;
-        cmd_vel.twist.angular.z = yaw_output;
+        cmd_vel.twist.angular.y = 0.;
+        cmd_vel.twist.angular.z = 0;
 
         ROS_INFO("Publishing velocity command: x=%f, y=%f, z=%f, yaw=%f", cmd_vel.twist.linear.x, cmd_vel.twist.linear.y, cmd_vel.twist.linear.z, cmd_vel.twist.angular.z);
         cmd_vel_pub_.publish(cmd_vel);
@@ -132,6 +162,50 @@ public:
     {
         // ROS_INFO("Received drone pose: x=%f, y=%f, z=%f", msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
         // resetIntegral();
+    }
+
+    void avoidCarCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
+    {
+        if (msg->data.size() > 0)
+        {
+            double current_time = ros::Time::now().toSec();
+            double dt = current_time - prev_time_;
+            if (dt <= 0)
+                return;
+
+            // PID control for y (based on car avoidance error)
+            double y_error = msg->data[0];
+            y_integral_ += y_error * dt;
+            double y_derivative = (y_error - prev_y_error_) / dt;
+
+            y_output_ = kp_y_ * y_error +
+                        ki_y_ * y_integral_ +
+                        kd_y_ * y_derivative;
+
+            // Limit y_output to [-1, 1]
+            y_output_ = std::max(-1.0, std::min(y_output_, 1.0));
+
+            last_avoid_time_ = ros::Time::now();
+            prev_y_error_ = y_error;
+            prev_time_ = current_time;
+
+            // ROS_INFO("y_output: %f", y_output_);
+        }
+    }
+
+    void resetCheck(const ros::TimerEvent &)
+    {
+        if ((ros::Time::now() - last_avoid_time_).toSec() > reset_timeout_)
+        {
+            if (y_output_ != 0.0)
+            {
+                y_output_ = 0.0;
+                y_integral_ = 0.0;                     // Reset integral term
+                prev_y_error_ = 0.0;                   // Reset previous error
+                prev_time_ = ros::Time::now().toSec(); // Reset time
+                ROS_INFO("Reset y_output, integral, and time variables to 0");
+            }
+        }
     }
 
     // Reset integral terms if needed
