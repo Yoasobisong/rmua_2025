@@ -5,21 +5,27 @@ pid:
     ki: 0.0001
     kd: 0.001
   z:
-    kp: 0.0
-    ki: 0.0000
-    kd: 0.000
+    kp: 0.01
+    ki: 0.0001
+    kd: 0.001
+  y:
+    kp: 0.02
+    ki: 0.0001
+    kd: 0.001
 
 # Control Limits
 control:
-  max_yaw_rate: 10.0  # rad/s
-  max_z_speed: 10.0   # m/s
-  forward_speed: 10.  # m/s
+  max_yaw_rate: 20.0  # rad/s
+  max_z_speed: 20.0   # m/s
+  forward_speed: 20.  # m/s
+  control_rate: 100  # Hz 
+  reset_timeout: 0.5
 
 # Topics
 topics:
   cmd_vel: '/airsim_node/drone_1/vel_cmd_body_frame'
   position: '/airsim_node/drone_1/front_right/position'
   drone_pose: '/airsim_node/drone_1/drone_pose'
+  avoid_car: '/airsim_node/drone_1/front_right/avoid_car'
 
 # Control Parameters
-control_rate: 100  # Hz 

@@ -6,6 +6,7 @@ yolo:
   min_car_area: 15000
   line_width: 1
   radio_k: 0.58
+  max_door_area: 60000000
   
 # Image Processing
 image:
@@ -21,6 +22,7 @@ topics:
   detection_output: '/airsim_node/drone_1/front_right/yolo_detect'
   position_output: '/airsim_node/drone_1/front_right/position'
   predict_z_output: '/airsim_node/drone_1/front_right/predict_z'
+  avoid_car_pub: '/airsim_node/drone_1/front_right/avoid_car'
 
 # Class IDs
 classes:
@@ -28,9 +30,4 @@ classes:
   right_doors: 1
   cars: 2 
 
-filter:
-  window_size: 5
-  max_differ: 400
-  min_trend: 1
-  error_ky: 0.00005
 
