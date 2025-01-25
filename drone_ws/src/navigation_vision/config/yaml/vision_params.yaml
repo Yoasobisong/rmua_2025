@@ -17,8 +17,10 @@ image:
 # Topics
 topics:
   camera_input: '/airsim_node/drone_1/front_right/Scene'
+  pose_input: '/airsim_node/drone_1/drone_pose'
   detection_output: '/airsim_node/drone_1/front_right/yolo_detect'
   position_output: '/airsim_node/drone_1/front_right/position'
+  predict_z_output: '/airsim_node/drone_1/front_right/predict_z'
 
 # Class IDs
 classes:
@@ -30,4 +32,5 @@ filter:
   window_size: 5
   max_differ: 400
   min_trend: 1
+  error_ky: 0.00005
 

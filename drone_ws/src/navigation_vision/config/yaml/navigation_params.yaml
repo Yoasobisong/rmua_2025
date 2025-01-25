@@ -13,7 +13,7 @@ pid:
 control:
   max_yaw_rate: 10.0  # rad/s
   max_z_speed: 10.0   # m/s
-  forward_speed: 5.0  # m/s
+  forward_speed: 10.  # m/s
 
 # Topics
 topics:
